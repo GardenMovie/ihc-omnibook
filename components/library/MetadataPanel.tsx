@@ -1,8 +1,9 @@
 import { Pencil } from "lucide-react";
-import { a11yLabel, languageLabel, type Book } from "@/lib/books";
+import { a11yBadgeText, a11yText, languageLabel, type Book } from "@/lib/books";
 import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { A11yBadge } from "./A11yBadge";
 import { BookCover } from "./BookCover";
 
 function Chips({ items }: { items: string[] }) {
@@ -46,7 +47,7 @@ export function MetadataPanel({
         <p className="py-10 text-center text-lg text-muted-foreground">{t("panel.empty")}</p>
       ) : (
         <>
-          <div className="mx-auto w-full max-w-64 text-[1rem]">
+          <div className="mx-auto w-full max-w-52 text-[0.9rem]">
             <BookCover book={book} />
           </div>
 
@@ -69,10 +70,25 @@ export function MetadataPanel({
               <Chips items={book.topics} />
             </Field>
             <Field label={t("panel.language")}>{languageLabel(book.language)}</Field>
-            <Field label={t("panel.a11y")}>{a11yLabel(book)}</Field>
+            {book.a11y && (
+              <Field label={t("panel.a11y")}>
+                {book.a11y.compatible === "no" ? (
+                  a11yText(book.a11y)
+                ) : (
+                  <span className="flex flex-col items-start gap-1.5">
+                    <A11yBadge a11y={book.a11y} withTooltip={false} />
+                    {/* Standard names are already on the pill; show longer notes */}
+                    {book.a11y.notes && a11yBadgeText(book.a11y) !== book.a11y.notes && (
+                      <span className="text-base text-muted-foreground">{book.a11y.notes}</span>
+                    )}
+                  </span>
+                )}
+              </Field>
+            )}
           </dl>
 
-          <div className="flex flex-wrap gap-4">
+          {/* Stays visible when the details scroll (long notes, large text) */}
+          <div className="sticky bottom-0 -mb-6 flex flex-wrap gap-4 bg-background pt-2 pb-6">
             <Button className="flex-1" onClick={onUnavailable}>
               {t("panel.open")}
             </Button>

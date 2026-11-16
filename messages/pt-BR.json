@@ -65,6 +65,9 @@
   "a11y.partial": "Parcialmente compatível",
   "a11y.no": "Não compatível",
   "a11y.unknown": "Não informado",
+  "a11y.badge.yes": "Acessível",
+  "a11y.badge.partial": "Parcial",
+  "a11y.badge.unknown": "Não verificado",
 
   "book.select": "Selecionar {title}",
   "book.by": "de {author}",

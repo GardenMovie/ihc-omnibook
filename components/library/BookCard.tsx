@@ -1,6 +1,6 @@
-import { Check } from "lucide-react";
-import { authorLine, type Book } from "@/lib/books";
+import { a11ySummary, authorLine, authorShort, type Book } from "@/lib/books";
 import { t } from "@/lib/i18n";
+import { A11yBadge } from "./A11yBadge";
 import { BookCover } from "./BookCover";
 
 export function BookCard({
@@ -16,7 +16,13 @@ export function BookCard({
     <button
       type="button"
       aria-pressed={selected}
-      aria-label={`${t("book.select", { title: book.title })} ${t("book.by", { author: authorLine(book) })}`}
+      aria-label={[
+        t("book.select", { title: book.title }),
+        t("book.by", { author: authorLine(book) }) + ".",
+        a11ySummary(book),
+      ]
+        .filter(Boolean)
+        .join(" ")}
       onClick={onSelect}
       className={`relative flex h-full w-full flex-col gap-2 rounded-lg border-2 p-1.5 text-left transition-colors duration-150 ${
         selected
@@ -25,14 +31,16 @@ export function BookCard({
       }`}
     >
       <BookCover book={book} className="text-[0.8rem] sm:text-[0.9rem]" />
-      {selected && (
-        <span className="absolute top-3 right-3 inline-flex size-7 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Check aria-hidden className="size-4" strokeWidth={3} />
-        </span>
-      )}
       <span className="px-1 pb-1">
-        <span className="block text-lg leading-snug font-semibold">{book.title}</span>
-        <span className="block text-base text-muted-foreground">{authorLine(book)}</span>
+        {/* Fixed-size slots (in line units, so they scale with text size) keep
+            every card the same height; full text lives in the details panel. */}
+        <span className="line-clamp-2 min-h-[2lh] text-lg leading-snug font-semibold">
+          {book.title}
+        </span>
+        <span className="line-clamp-1 text-base text-muted-foreground">{authorShort(book)}</span>
+        <span className="mt-2 flex min-h-8 items-start">
+          <A11yBadge a11y={book.a11y} />
+        </span>
       </span>
     </button>
   );
