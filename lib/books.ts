@@ -7,8 +7,8 @@ import { t } from "@/lib/i18n";
  * the file claims, e.g. "PDF/UA" or "WCAG 2.x AA". Absent for plain text
  * (txt/md), which is inherently accessible and has nothing to declare.
  */
-export type A11y = {
-  compatible: "yes" | "partial" | "no" | "unknown";
+export type BookAccessibility = {
+  status: "yes" | "partial" | "no" | "unknown";
   notes?: string;
 };
 
@@ -23,7 +23,7 @@ export type Book = {
   format: "pdf" | "epub" | "txt" | "md";
   addedAt: number;
   lastOpenedAt?: number;
-  a11y?: A11y;
+  accessibility?: BookAccessibility;
   cover: { from: string; to: string; text: string };
 };
 
@@ -78,28 +78,30 @@ export function authorShort(book: Book): string {
 }
 
 /** "Compatível (PDF/UA)" */
-export function a11yText(a11y: A11y): string {
-  const label = t(`a11y.${a11y.compatible}`);
-  return a11y.notes ? `${label} (${a11y.notes})` : label;
+export function accessibilityText(accessibility: BookAccessibility): string {
+  const label = t(`accessibility.${accessibility.status}`);
+  return accessibility.notes ? `${label} (${accessibility.notes})` : label;
 }
 
 /** Short text shown on the badge itself; null = no badge ("no"). */
-export function a11yBadgeText(a11y: A11y): string | null {
-  switch (a11y.compatible) {
+export function accessibilityBadgeText(accessibility: BookAccessibility): string | null {
+  switch (accessibility.status) {
     case "yes":
-      return a11y.notes ?? t("a11y.badge.yes");
+      return accessibility.notes ?? t("accessibility.badge.yes");
     case "partial":
-      return t("a11y.badge.partial");
+      return t("accessibility.badge.partial");
     case "unknown":
-      return t("a11y.badge.unknown");
+      return t("accessibility.badge.unknown");
     case "no":
       return null;
   }
 }
 
 /** Spoken summary for the card's accessible name; undefined = say nothing. */
-export function a11ySummary(book: Book): string | undefined {
-  return book.a11y ? `${t("panel.a11y")}: ${a11yText(book.a11y)}.` : undefined;
+export function accessibilitySummary(book: Book): string | undefined {
+  return book.accessibility
+    ? `${t("panel.accessibility")}: ${accessibilityText(book.accessibility)}.`
+    : undefined;
 }
 
 export function languageLabel(code?: string): string {
@@ -129,7 +131,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 40 * DAY,
     lastOpenedAt: NOW - 1 * DAY,
-    a11y: { compatible: "yes", notes: "PDF/UA" },
+    accessibility: { status: "yes", notes: "PDF/UA" },
     cover: { from: "#7a1020", to: "#12080c", text: "#ffffff" },
   },
   {
@@ -143,7 +145,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 35 * DAY,
     lastOpenedAt: NOW - 3 * DAY,
-    a11y: { compatible: "partial", notes: "PDF etiquetado, sem PDF/UA" },
+    accessibility: { status: "partial", notes: "PDF etiquetado, sem PDF/UA" },
     cover: { from: "#0f5a24", to: "#062b12", text: "#ffffff" },
   },
   {
@@ -157,7 +159,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "epub",
     addedAt: NOW - 33 * DAY,
     lastOpenedAt: NOW - 9 * DAY,
-    a11y: { compatible: "yes", notes: "WCAG 2.x AA" },
+    accessibility: { status: "yes", notes: "WCAG 2.x AA" },
     cover: { from: "#e6dcb8", to: "#c9bb8a", text: "#3b3320" },
   },
   {
@@ -171,7 +173,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 20 * DAY,
     lastOpenedAt: NOW - 2 * DAY,
-    a11y: { compatible: "no" },
+    accessibility: { status: "no" },
     cover: { from: "#2f6fa8", to: "#9ec3e0", text: "#ffffff" },
   },
   {
@@ -185,7 +187,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 60 * DAY,
     lastOpenedAt: NOW - 30 * DAY,
-    a11y: { compatible: "unknown" },
+    accessibility: { status: "unknown" },
     cover: { from: "#1c1c1f", to: "#050505", text: "#f2f2f2" },
   },
   {
@@ -199,7 +201,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 90 * DAY,
     lastOpenedAt: NOW - 45 * DAY,
-    a11y: { compatible: "unknown" },
+    accessibility: { status: "unknown" },
     cover: { from: "#16261d", to: "#0a120e", text: "#b9c9bd" },
   },
   {
@@ -213,7 +215,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 80 * DAY,
     lastOpenedAt: NOW - 12 * DAY,
-    a11y: { compatible: "no" },
+    accessibility: { status: "no" },
     cover: { from: "#16228a", to: "#0b1250", text: "#ffffff" },
   },
   {
@@ -227,7 +229,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "epub",
     addedAt: NOW - 15 * DAY,
     lastOpenedAt: NOW - 5 * DAY,
-    a11y: { compatible: "partial", notes: "Metadados de acessibilidade incompletos" },
+    accessibility: { status: "partial", notes: "Metadados de acessibilidade incompletos" },
     cover: { from: "#1a1aff", to: "#7d2bd6", text: "#ffffff" },
   },
   {
@@ -241,7 +243,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 70 * DAY,
     lastOpenedAt: NOW - 20 * DAY,
-    a11y: { compatible: "unknown" },
+    accessibility: { status: "unknown" },
     cover: { from: "#c2152b", to: "#7b0d1a", text: "#ffffff" },
   },
   {
@@ -255,7 +257,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "pdf",
     addedAt: NOW - 55 * DAY,
     lastOpenedAt: NOW - 7 * DAY,
-    a11y: { compatible: "yes", notes: "PDF/UA" },
+    accessibility: { status: "yes", notes: "PDF/UA" },
     cover: { from: "#f1e4d4", to: "#d98a5a", text: "#3a2416" },
   },
   {
@@ -269,7 +271,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "epub",
     addedAt: NOW - 4 * DAY,
     lastOpenedAt: NOW - 4 * DAY,
-    a11y: { compatible: "yes", notes: "WCAG 2.x AA" },
+    accessibility: { status: "yes", notes: "WCAG 2.x AA" },
     cover: { from: "#0b6b5b", to: "#0b3d37", text: "#ffffff" },
   },
   {

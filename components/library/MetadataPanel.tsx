@@ -1,9 +1,14 @@
 import { Pencil } from "lucide-react";
-import { a11yBadgeText, a11yText, languageLabel, type Book } from "@/lib/books";
+import {
+  accessibilityBadgeText,
+  accessibilityText,
+  languageLabel,
+  type Book,
+} from "@/lib/books";
 import { t } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { A11yBadge } from "./A11yBadge";
+import { AccessibilityBadge } from "./AccessibilityBadge";
 import { BookCover } from "./BookCover";
 
 function Chips({ items }: { items: string[] }) {
@@ -70,17 +75,20 @@ export function MetadataPanel({
               <Chips items={book.topics} />
             </Field>
             <Field label={t("panel.language")}>{languageLabel(book.language)}</Field>
-            {book.a11y && (
-              <Field label={t("panel.a11y")}>
-                {book.a11y.compatible === "no" ? (
-                  a11yText(book.a11y)
+            {book.accessibility && (
+              <Field label={t("panel.accessibility")}>
+                {book.accessibility.status === "no" ? (
+                  accessibilityText(book.accessibility)
                 ) : (
                   <span className="flex flex-col items-start gap-1.5">
-                    <A11yBadge a11y={book.a11y} withTooltip={false} />
+                    <AccessibilityBadge accessibility={book.accessibility} withTooltip={false} />
                     {/* Standard names are already on the pill; show longer notes */}
-                    {book.a11y.notes && a11yBadgeText(book.a11y) !== book.a11y.notes && (
-                      <span className="text-base text-muted-foreground">{book.a11y.notes}</span>
-                    )}
+                    {book.accessibility.notes &&
+                      accessibilityBadgeText(book.accessibility) !== book.accessibility.notes && (
+                        <span className="text-base text-muted-foreground">
+                          {book.accessibility.notes}
+                        </span>
+                      )}
                   </span>
                 )}
               </Field>

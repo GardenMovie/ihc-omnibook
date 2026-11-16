@@ -1,6 +1,6 @@
-import { a11ySummary, authorLine, authorShort, type Book } from "@/lib/books";
+import { accessibilitySummary, authorLine, authorShort, type Book } from "@/lib/books";
 import { t } from "@/lib/i18n";
-import { A11yBadge } from "./A11yBadge";
+import { AccessibilityBadge } from "./AccessibilityBadge";
 import { BookCover } from "./BookCover";
 
 export function BookCard({
@@ -19,7 +19,7 @@ export function BookCard({
       aria-label={[
         t("book.select", { title: book.title }),
         t("book.by", { author: authorLine(book) }) + ".",
-        a11ySummary(book),
+        accessibilitySummary(book),
       ]
         .filter(Boolean)
         .join(" ")}
@@ -39,7 +39,7 @@ export function BookCard({
         </span>
         <span className="line-clamp-1 text-base text-muted-foreground">{authorShort(book)}</span>
         <span className="mt-2 flex min-h-8 items-start">
-          <A11yBadge a11y={book.a11y} />
+          <AccessibilityBadge accessibility={book.accessibility} />
         </span>
       </span>
     </button>
