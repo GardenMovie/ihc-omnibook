@@ -2,6 +2,8 @@
 
 import * as Tooltip from "@radix-ui/react-tooltip";
 import type { ButtonHTMLAttributes, Ref } from "react";
+import { ariaKeys, keyLabel } from "@/lib/shortcuts";
+import { KeyHint, tooltipClass } from "./shortcut";
 
 /** Square icon button. Always has an accessible name and a tooltip (STYLE 4). */
 export function IconButton({
@@ -11,9 +13,12 @@ export function IconButton({
   className = "",
   ref,
   children,
+  shortcut,
   ...props
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> & {
   label: string;
+  /** Shown on the corner of the button and in the tooltip. */
+  shortcut?: string;
   /** "ghost" has no visible outline until hovered; for quiet toolbar actions. */
   variant?: "outline" | "ghost";
   /** For toggles: shows filled when on, and sets aria-pressed. */
@@ -44,18 +49,20 @@ export function IconButton({
           type="button"
           aria-label={label}
           aria-pressed={pressed}
-          className={`inline-flex size-12 shrink-0 items-center justify-center border-2 text-lg font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${shape} ${state} ${className}`}
+          aria-keyshortcuts={ariaKeys(shortcut)}
+          className={`relative inline-flex size-12 shrink-0 items-center justify-center border-2 text-lg font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${shape} ${state} ${className}`}
           {...props}
         >
           {children}
+          <KeyHint
+            shortcut={shortcut}
+            className="absolute -right-1.5 -bottom-1.5 bg-background text-foreground"
+          />
         </button>
       </Tooltip.Trigger>
       <Tooltip.Portal>
-        <Tooltip.Content
-          sideOffset={6}
-          className="z-50 rounded-md bg-foreground px-3 py-1.5 text-base text-background"
-        >
-          {label}
+        <Tooltip.Content sideOffset={6} className={tooltipClass}>
+          {shortcut ? `${label} (${keyLabel(shortcut)})` : label}
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>

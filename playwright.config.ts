@@ -6,7 +6,19 @@ export default defineConfig({
   testDir: "tests/e2e",
   // One worker: the tests share one dev server.
   workers: 1,
-  use: { baseURL: `http://localhost:${PORT}` },
+  use: {
+    baseURL: `http://localhost:${PORT}`,
+    // Not a first visit, so the walkthrough offer does not cover the page.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: `http://localhost:${PORT}`,
+          localStorage: [{ name: "omnibook-settings", value: '{"tourSeen":true}' }],
+        },
+      ],
+    },
+  },
   projects: [
     {
       name: "chromium",

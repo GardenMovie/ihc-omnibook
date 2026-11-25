@@ -1,4 +1,4 @@
-import { Pencil } from "lucide-react";
+import { Download, Pencil } from "lucide-react";
 import {
   accessibilityBadgeText,
   accessibilityText,
@@ -6,8 +6,10 @@ import {
   type Book,
 } from "@/lib/books";
 import { t } from "@/lib/i18n";
+import { ariaKeys, type Shortcuts } from "@/lib/shortcuts";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { KeyHint, ShortcutTooltip } from "@/components/ui/shortcut";
 import { AccessibilityBadge } from "./AccessibilityBadge";
 import { BookCover } from "./BookCover";
 
@@ -38,10 +40,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function MetadataPanel({
   book,
-  onUnavailable,
+  onEdit,
+  onExport,
+  onDownload,
+  onOpen,
+  shortcuts,
 }: {
+  shortcuts: Shortcuts;
   book: Book | undefined;
-  onUnavailable: () => void;
+  /** `opener` gets the focus back when the modal closes. */
+  onEdit: (book: Book, opener: HTMLElement) => void;
+  onExport: (book: Book, opener: HTMLElement) => void;
+  onDownload: (book: Book) => void;
+  onOpen: (book: Book, opener: HTMLElement) => void;
 }) {
   return (
     <aside
@@ -58,7 +69,11 @@ export function MetadataPanel({
 
           <div className="flex items-start justify-between gap-4">
             <h2 className="text-[1.625rem] leading-tight font-semibold">{book.title}</h2>
-            <IconButton label={t("panel.edit")} onClick={onUnavailable}>
+            <IconButton
+              label={t("panel.edit")}
+              shortcut={shortcuts.edit}
+              onClick={(e) => onEdit(book, e.currentTarget)}
+            >
               <Pencil aria-hidden className="size-5" />
             </IconButton>
           </div>
@@ -97,12 +112,39 @@ export function MetadataPanel({
 
           {/* Stays visible when the details scroll (long notes, large text) */}
           <div className="sticky bottom-0 -mb-6 flex flex-wrap gap-4 bg-background pt-2 pb-6">
-            <Button className="flex-1" onClick={onUnavailable}>
-              {t("panel.open")}
-            </Button>
-            <Button variant="secondary" className="flex-1" onClick={onUnavailable}>
-              {t("panel.exportRef")}
-            </Button>
+            <ShortcutTooltip shortcut={shortcuts.open}>
+              <Button
+                className="flex-1"
+                aria-keyshortcuts={ariaKeys(shortcuts.open)}
+                onClick={(e) => onOpen(book, e.currentTarget)}
+              >
+                {t("panel.open")}
+                <KeyHint shortcut={shortcuts.open} />
+              </Button>
+            </ShortcutTooltip>
+            <ShortcutTooltip shortcut={shortcuts.export}>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                aria-keyshortcuts={ariaKeys(shortcuts.export)}
+                onClick={(e) => onExport(book, e.currentTarget)}
+              >
+                {t("panel.exportRef")}
+                <KeyHint shortcut={shortcuts.export} />
+              </Button>
+            </ShortcutTooltip>
+            <ShortcutTooltip shortcut={shortcuts.download}>
+              <Button
+                variant="secondary"
+                className="w-full"
+                aria-keyshortcuts={ariaKeys(shortcuts.download)}
+                onClick={() => onDownload(book)}
+              >
+                <Download aria-hidden className="size-5" />
+                {t("panel.download")}
+                <KeyHint shortcut={shortcuts.download} />
+              </Button>
+            </ShortcutTooltip>
           </div>
         </>
       )}

@@ -99,12 +99,12 @@ test("adds files, keeps them after reload, and restores a backup", async ({ page
 
   await page.reload();
   await expect(card(page, "Livro PDF").locator("img")).toBeVisible();
-  for (const query of ["souza", "grafos", "redes", "2020"]) {
-    await page.getByRole("searchbox").fill(query);
+  for (const query of ["souza", "livro pdf", "@topic:grafos", "@topic:redes"]) {
+    await page.getByRole("combobox", { name: "Pesquisar livros" }).fill(query);
     await expect(card(page, "Livro EPUB")).toBeHidden();
     await expect(card(page, "Livro PDF")).toBeVisible();
   }
-  await page.getByRole("searchbox").fill("");
+  await page.getByRole("combobox", { name: "Pesquisar livros" }).fill("");
 
   await page.getByText("Dev tools").click();
   const download = page.waitForEvent("download");

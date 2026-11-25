@@ -23,10 +23,17 @@ export function AppModal({
   confirmLabel,
   onConfirm,
   maxWidth = "910px",
+  height,
   returnFocusRef,
   footer,
   dismissOnOutside = true,
+  compact = false,
+  fullScreen = false,
 }: {
+  /** Fills the whole window, for reading. */
+  fullScreen?: boolean;
+  /** For a line or two of text: the content takes only the room it needs. */
+  compact?: boolean;
   /** Replaces the default buttons, for modals with other actions. */
   footer?: ReactNode;
   /** False for forms, so a stray click does not throw away what was typed. */
@@ -42,6 +49,8 @@ export function AppModal({
   confirmLabel?: string;
   onConfirm?: () => void;
   maxWidth?: string;
+  /** Fixed height, for content that changes size; never taller than the screen. */
+  height?: string;
   /** The element that opened the modal; it gets focus back on close. */
   returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
@@ -52,10 +61,13 @@ export function AppModal({
         <Dialog.Content
           // No description: say so explicitly so Radix does not warn.
           {...(description ? {} : { "aria-describedby": undefined })}
-          style={{ maxWidth }}
+          style={fullScreen ? undefined : { maxWidth, height }}
           // Give focus back to whatever opened the modal (STYLE 4).
           onCloseAutoFocus={(event) => {
-            if (returnFocusRef?.current?.isConnected) {
+            // Another modal took this one's place: the focus is already there.
+            if (document.querySelector("[role=dialog]")) {
+              event.preventDefault();
+            } else if (returnFocusRef?.current?.isConnected) {
               event.preventDefault();
               returnFocusRef.current.focus();
             }
@@ -83,7 +95,11 @@ export function AppModal({
               first.focus();
             }
           }}
-          className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-xl border-2 border-border bg-background p-6 text-foreground shadow-[0_12px_40px_rgb(0_0_0/0.25)]"
+          className={`fixed z-50 flex flex-col overflow-y-auto bg-background text-foreground ${
+            fullScreen
+              ? "inset-0 gap-3 p-4"
+              : "top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 rounded-xl border-2 border-border p-6 shadow-[0_12px_40px_rgb(0_0_0/0.25)]"
+          }`}
         >
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -107,12 +123,15 @@ export function AppModal({
               the whole dialog scrolls instead. */}
           <div
             data-modal-body
-            className="-mx-1 min-h-[min(14rem,40dvh)] flex-1 overflow-y-auto px-1 py-1"
+            className={`-mx-1 flex-1 px-1 py-1 ${
+              compact ? "" : "min-h-[min(14rem,40dvh)] overflow-y-auto"
+            }`}
           >
             {children}
           </div>
 
-          <div className="flex flex-wrap justify-end gap-4">
+          {/* `footer={false}`: no row at all. */}
+          <div className="flex flex-wrap justify-end gap-4 empty:hidden">
             {footer ?? (
               <>
                 {cancelLabel && (

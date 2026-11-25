@@ -1,44 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, type Ref } from "react";
-import { BookOpen, Plus, Search, Settings as SettingsIcon, X } from "lucide-react";
+import type { Ref, RefObject } from "react";
+import { BookOpen, Plus, Settings as SettingsIcon } from "lucide-react";
 import { t } from "@/lib/i18n";
+import type { FilterKind } from "@/lib/search";
+import { ariaKeys, type Shortcuts } from "@/lib/shortcuts";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { KeyHint, ShortcutTooltip } from "@/components/ui/shortcut";
+import { SearchBox } from "./SearchBox";
 
 export function Navbar({
   query,
   onQueryChange,
+  terms,
   onOpenSettings,
   settingsButtonRef,
   onAdd,
   addButtonRef,
+  searchRef,
+  shortcuts,
 }: {
+  searchRef: RefObject<HTMLInputElement | null>;
+  shortcuts: Shortcuts;
   onAdd: () => void;
   addButtonRef: Ref<HTMLButtonElement>;
   settingsButtonRef: Ref<HTMLButtonElement>;
   query: string;
   onQueryChange: (q: string) => void;
+  terms: Record<FilterKind, string[]>;
   onOpenSettings: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // "/" focuses the search box (STYLE 6), unless the user is already typing.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
-      const el = e.target as HTMLElement | null;
-      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) {
-        return;
-      }
-      e.preventDefault();
-      inputRef.current?.focus();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
   return (
     // Wide screens: logo | search centered on the bar | actions. The two outer
     // columns are equal (1fr) so the search box sits in the true middle.
@@ -53,60 +46,33 @@ export function Navbar({
         {t("nav.home")}
       </Link>
 
-      <div role="search" className="flex min-w-64 flex-1 items-center">
-        <div className="relative flex-1">
-          <label htmlFor="library-search" className="sr-only">
-            {t("search.label")}
-          </label>
-          <Search
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            ref={inputRef}
-            id="library-search"
-            type="search"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={t("search.placeholder")}
-            autoComplete="off"
-            className="min-h-12 w-full rounded-full border-[1.5px] border-input bg-muted py-2 pr-14 pl-12 text-lg text-foreground transition-colors placeholder:text-muted-foreground hover:bg-accent/60 focus-visible:border-primary focus-visible:bg-background [&::-webkit-search-cancel-button]:hidden"
-          />
-          {!query && (
-            // Shortcut hint; the shortcut itself is announced by the field's label
-            <kbd
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 rounded-md border border-border bg-background px-2 text-base leading-snug text-muted-foreground"
-            >
-              /
-            </kbd>
-          )}
-          {query && (
-            <button
-              type="button"
-              aria-label={t("search.clear")}
-              onClick={() => {
-                onQueryChange("");
-                inputRef.current?.focus();
-              }}
-              className="absolute top-1/2 right-1.5 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
-            >
-              <X aria-hidden className="size-5" />
-            </button>
-          )}
-        </div>
-      </div>
+      <SearchBox
+        query={query}
+        onQueryChange={onQueryChange}
+        terms={terms}
+        inputRef={searchRef}
+        shortcut={shortcuts.search}
+      />
 
       <div className="ml-auto flex items-center gap-3 lg:justify-self-end">
-        <Button ref={addButtonRef} className="rounded-full! px-5!" onClick={onAdd}>
-          <Plus aria-hidden className="size-5" strokeWidth={2.5} />
-          {t("add.button")}
-        </Button>
+        <ShortcutTooltip shortcut={shortcuts.add}>
+          <Button
+            ref={addButtonRef}
+            className="rounded-full! px-5!"
+            aria-keyshortcuts={ariaKeys(shortcuts.add)}
+            onClick={onAdd}
+          >
+            <Plus aria-hidden className="size-5" strokeWidth={2.5} />
+            {t("add.button")}
+            <KeyHint shortcut={shortcuts.add} />
+          </Button>
+        </ShortcutTooltip>
         {/* Replaces the Figma account avatar (there are no accounts, SPEC 6) and
             the text size / contrast / dark buttons: all live in this modal now. */}
         <IconButton
           ref={settingsButtonRef}
           label={t("settings.menu")}
+          shortcut={shortcuts.settings}
           onClick={onOpenSettings}
         >
           <SettingsIcon aria-hidden className="size-6" />

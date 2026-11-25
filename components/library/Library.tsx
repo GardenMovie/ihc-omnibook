@@ -5,9 +5,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { X } from "lucide-react";
 import { filterBooks, sortBooks, type SortKey } from "@/lib/books";
-import { purgeDeleted, restoreBook } from "@/lib/db/books";
+import { deleteBook, markOpened, purgeDeleted, restoreBook } from "@/lib/db/books";
+import type { Book } from "@/lib/db/types";
+import { saveFile } from "@/lib/download";
 import { useBooks, useDrafts } from "@/lib/hooks";
 import { plural, t } from "@/lib/i18n";
+import { getBookFile } from "@/lib/library";
+import { FILE_TYPES, uniqueTerms } from "@/lib/search";
+import { activeShortcuts, ACTIONS, isTyping, keyFromEvent, type Action } from "@/lib/shortcuts";
 import {
   applySettings,
   DEFAULT_SETTINGS,
@@ -16,11 +21,16 @@ import {
   type Settings,
 } from "@/lib/settings";
 import { AddBookModal, type AddMode } from "@/components/modals/AddBookModal";
+import { EditBookModal } from "@/components/modals/EditBookModal";
+import { ExportRefModal } from "@/components/modals/ExportRefModal";
+import { TourModal } from "@/components/modals/TourModal";
+import { canRead, ReaderModal } from "@/components/reader/ReaderModal";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { BookCard } from "./BookCard";
 import { MetadataPanel } from "./MetadataPanel";
 import { Navbar } from "./Navbar";
-import { SettingsModal } from "./SettingsModal";
+import { SettingsModal, type SettingsTab } from "./SettingsModal";
 import { SortMenu } from "./SortMenu";
 
 const DevTools =
@@ -40,14 +50,31 @@ export function Library() {
   const addButtonRef = useRef<HTMLButtonElement>(null);
   // Whatever opened the add modal gets focus back.
   const addOpenerRef = useRef<HTMLElement | null>(null);
+  // The modal about one book. `fromExport`: go back to the reference after editing.
+  const [bookModal, setBookModal] = useState<{
+    kind: "edit" | "export";
+    id: string;
+    fromExport?: boolean;
+  }>();
+  const bookOpenerRef = useRef<HTMLElement | null>(null);
+  // The book being read.
+  const [readingId, setReadingId] = useState<string>();
+  const readerOpenerRef = useRef<HTMLElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [tourOpen, setTourOpen] = useState(false);
+  const tourOpenerRef = useRef<HTMLElement | null>(null);
+  // Until then the defaults would offer the walkthrough to everyone.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Saved settings are already applied to the page before first paint
   // (BOOT_SCRIPT in layout); this just syncs the controls with them.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(loadSettings());
+    setSettingsLoaded(true);
   }, []);
 
   // Free the space of books deleted in earlier sessions.
@@ -71,10 +98,20 @@ export function Library() {
     applySettings(next);
   }
 
-  // Areas and topics are matched by the search box itself (see matchesQuery).
+  // The "@" filters are part of the query itself (see matchesQuery).
   const visible = useMemo(
     () => sortBooks(filterBooks(books ?? [], { query }), sort),
     [books, query, sort],
+  );
+
+  // What the search box suggests after each "@" filter.
+  const terms = useMemo(
+    () => ({
+      area: uniqueTerms((books ?? []).flatMap((b) => b.areas)),
+      topic: uniqueTerms((books ?? []).flatMap((b) => b.topics)),
+      file: FILE_TYPES,
+    }),
+    [books],
   );
 
   const filtering = query.trim() !== "";
@@ -99,6 +136,40 @@ export function Library() {
 
   const unavailable = () => setNotice({ text: t("toast.soon") });
 
+  // The reader has its own history entry, so the browser's Back button closes it.
+  useEffect(() => {
+    const onPop = () => setReadingId(undefined);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  function openReader(book: Book, opener: HTMLElement) {
+    if (!canRead(book.format)) return unavailable();
+    readerOpenerRef.current = opener;
+    setNotice(undefined);
+    // "Acesso recente" may reorder the list: keep showing this book.
+    setSelectedId(book.id);
+    setReadingId(book.id);
+    window.history.pushState({ reader: true }, "");
+    markOpened(book.id).catch(console.error);
+  }
+
+  function closeReader() {
+    setReadingId(undefined);
+    if (window.history.state?.reader) window.history.back();
+  }
+
+  function download(book: Book) {
+    setNotice(undefined);
+    getBookFile(book.id).then(
+      (file) => saveFile(file, file.name),
+      (cause) => {
+        console.error(cause);
+        setNotice({ text: t("panel.downloadError") });
+      },
+    );
+  }
+
   function openAdd(mode: AddMode, opener: HTMLElement | null) {
     addOpenerRef.current = opener;
     setNotice(undefined);
@@ -115,6 +186,90 @@ export function Library() {
     setQuery("");
     setSelectedId(id);
   }
+
+  // The live record; once the book is gone, its modal closes.
+  const modalBook = books?.find((b) => b.id === bookModal?.id);
+
+  function openBookModal(kind: "edit" | "export", book: Book, opener: HTMLElement) {
+    bookOpenerRef.current = opener;
+    setNotice(undefined);
+    // Keep showing this book, even if editing it changes the order of the list.
+    setSelectedId(book.id);
+    setBookModal({ kind, id: book.id });
+  }
+
+  function closeEdit() {
+    setBookModal((open) => (open?.fromExport ? { kind: "export", id: open.id } : undefined));
+  }
+
+  /** Brings back a deleted or discarded book, from the notice. */
+  function undoDelete(book: Book) {
+    restoreBook(book.id).then(
+      () => {
+        setSelectedId(book.id);
+        setNotice({ text: t("details.restored", { title: book.title }) });
+      },
+      () => setNotice({ text: t("details.saveError") }),
+    );
+  }
+
+  async function removeBook(book: Book) {
+    // The button that opened the modal may disappear with the book.
+    const opener = bookOpenerRef.current;
+    bookOpenerRef.current = addButtonRef.current;
+    try {
+      await deleteBook(book.id);
+    } catch (cause) {
+      bookOpenerRef.current = opener;
+      throw cause;
+    }
+    setBookModal(undefined);
+    setNotice({ text: t("edit.deleted", { title: book.title }), undo: () => undoDelete(book) });
+  }
+
+  function openSettings(tab: SettingsTab) {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }
+
+  function openTour(opener: HTMLElement | null) {
+    tourOpenerRef.current = opener;
+    setNotice(undefined);
+    setSettingsOpen(false);
+    updateSettings({ tourSeen: true });
+    setTourOpen(true);
+  }
+
+  const shortcuts = activeShortcuts(settings.shortcuts, settings.singleKeys);
+
+  /** False when there is nothing to act on. */
+  function runShortcut(action: Action): boolean {
+    // A modal about one book gives the focus back to where the user was.
+    const here = document.activeElement as HTMLElement;
+    if (action === "search") searchRef.current?.focus();
+    else if (action === "add") openAdd("upload", addButtonRef.current);
+    else if (action === "settings") openSettings("appearance");
+    else if (action === "help") openSettings("shortcuts");
+    else if (!selected) return false;
+    else if (action === "download") download(selected);
+    else if (action === "open") openReader(selected, here);
+    else openBookModal(action, selected, here);
+    return true;
+  }
+
+  // No dependency list: the handler must see the current book and settings.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.repeat || event.isComposing) return;
+      if (isTyping(event.target) || document.querySelector("[role=dialog]")) return;
+      const key = keyFromEvent(event);
+      const action = key && ACTIONS.find((a) => shortcuts[a] === key);
+      // Otherwise the key would also be typed into the field that gets focus.
+      if (action && runShortcut(action)) event.preventDefault();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   return (
     <Tooltip.Provider delayDuration={300}>
@@ -133,10 +288,42 @@ export function Library() {
         <Navbar
           query={query}
           onQueryChange={setQuery}
-          onOpenSettings={() => setSettingsOpen(true)}
+          terms={terms}
+          onOpenSettings={() => openSettings("appearance")}
           settingsButtonRef={settingsButtonRef}
+          searchRef={searchRef}
+          shortcuts={shortcuts}
           onAdd={() => openAdd("upload", addButtonRef.current)}
           addButtonRef={addButtonRef}
+        />
+        {/* Closing it in any way counts as "not now". */}
+        <AppModal
+          open={settingsLoaded && !settings.tourSeen}
+          onOpenChange={() => updateSettings({ tourSeen: true })}
+          dismissOnOutside={false}
+          title={t("tour.offerTitle")}
+          maxWidth="32rem"
+          compact
+          returnFocusRef={addButtonRef}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => updateSettings({ tourSeen: true })}>
+                {t("tour.dismiss")}
+              </Button>
+              <Button data-autofocus onClick={() => openTour(addButtonRef.current)}>
+                {t("tour.start")}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-lg">{t("tour.offer")}</p>
+        </AppModal>
+        <TourModal
+          open={tourOpen}
+          onOpenChange={setTourOpen}
+          settings={settings}
+          onChange={updateSettings}
+          returnFocusRef={tourOpenerRef}
         />
         <AddBookModal
           mode={addMode}
@@ -155,22 +342,52 @@ export function Library() {
           onDiscardedLast={(book) => {
             setNotice({
               text: t("details.discarded", { title: book.title }),
-              undo: () => {
-                restoreBook(book.id).then(
-                  () => setNotice({ text: t("details.restored", { title: book.title }) }),
-                  () => setNotice({ text: t("details.saveError") }),
-                );
-              },
+              undo: () => undoDelete(book),
             });
             finishAdd();
           }}
         />
+        <EditBookModal
+          book={bookModal?.kind === "edit" ? modalBook : undefined}
+          returnFocusRef={bookOpenerRef}
+          onClose={closeEdit}
+          onSaved={(book) => {
+            setNotice({ text: t("edit.saved", { title: book.title }) });
+            closeEdit();
+          }}
+          onDelete={removeBook}
+        />
+        <ExportRefModal
+          book={bookModal?.kind === "export" ? modalBook : undefined}
+          returnFocusRef={bookOpenerRef}
+          onClose={() => setBookModal(undefined)}
+          onEdit={() =>
+            setBookModal((open) => open && { kind: "edit", id: open.id, fromExport: true })
+          }
+        />
+        <ReaderModal
+          book={books?.find((b) => b.id === readingId)}
+          returnFocusRef={readerOpenerRef}
+          onClose={closeReader}
+        />
         <SettingsModal
           returnFocusRef={settingsButtonRef}
           open={settingsOpen}
+          initialTab={settingsTab}
           onOpenChange={setSettingsOpen}
           settings={settings}
           onChange={updateSettings}
+          onStartTour={() => openTour(settingsButtonRef.current)}
+          onDeletedAll={() => {
+            // Their storage is gone already; only the page has to catch up.
+            // No walkthrough offer on top of this; the next visit makes it.
+            setSettings({ ...DEFAULT_SETTINGS, tourSeen: true });
+            applySettings(DEFAULT_SETTINGS);
+            setQuery("");
+            setSelectedId(undefined);
+            setSettingsOpen(false);
+            setNotice({ text: t("data.deleted") });
+          }}
         />
 
         <div className="grid min-h-0 flex-1 gap-x-4 gap-y-3 px-4 pt-3 pb-4 lg:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
@@ -228,7 +445,14 @@ export function Library() {
             </section>
           </main>
 
-          <MetadataPanel book={selected} onUnavailable={unavailable} />
+          <MetadataPanel
+            book={selected}
+            shortcuts={shortcuts}
+            onEdit={(book, opener) => openBookModal("edit", book, opener)}
+            onExport={(book, opener) => openBookModal("export", book, opener)}
+            onDownload={download}
+            onOpen={openReader}
+          />
         </div>
       </div>
 

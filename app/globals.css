@@ -27,6 +27,15 @@
   /* Page canvas behind the white panels (Figma shows a soft grey) */
   --canvas: #f5f7fa;
   --nav-h: 3.75rem;
+  /* Search filters: area and topic. Blue and orange stay apart for red-green
+     color blindness; the tritanopia theme uses pink and teal. */
+  --tag-area: #cfe0ff;
+  --tag-area-line: #0b57d0;
+  --tag-topic: #ffe0b2;
+  --tag-topic-line: #8a4b00;
+  /* File type: grey, apart from both for any color vision. */
+  --tag-file: #dde1e7;
+  --tag-file-line: #3d4756;
 }
 
 [data-theme="dark"] {
@@ -45,6 +54,12 @@
   --destructive: #f2b8b5;
   --ring: #8ab4f8;
   --canvas: #0a0e12;
+  --tag-area: #1e3a6e;
+  --tag-area-line: #8ab4f8;
+  --tag-topic: #5c3a00;
+  --tag-topic-line: #ffb74d;
+  --tag-file: #333e4b;
+  --tag-file-line: #c2ccd8;
 }
 
 [data-theme="high-contrast"] {
@@ -63,6 +78,12 @@
   --destructive: #ff8a80;
   --ring: #ffeb3b;
   --canvas: #000;
+  --tag-area: #002f87;
+  --tag-area-line: #80d8ff;
+  --tag-topic: #6b3000;
+  --tag-topic-line: #ffeb3b;
+  --tag-file: #3a3a3a;
+  --tag-file-line: #fff;
 }
 
 [data-theme="protanopia"],
@@ -74,6 +95,10 @@
   --ring: #a10d5b;
   --secondary-foreground: #a10d5b;
   --accent-2: #0b6b5b;
+  --tag-area: #ffd6e8;
+  --tag-area-line: #a10d5b;
+  --tag-topic: #c8eee6;
+  --tag-topic-line: #0b6b5b;
 }
 
 @theme inline {
