@@ -81,7 +81,7 @@ The first add asks the browser to keep the data (`navigator.storage.persist()`).
 
 ## 3. Add book, step 2: details (`addLivroDetalhes`)
 
-**Built:** `components/modals/DetailsStep.tsx`. The form fields in `components/modals/fields.tsx` (text field, one input per author, chips) are meant to be reused by "Editar".
+**Built:** `components/modals/DetailsStep.tsx`. The form itself (state, validation and groups of fields) is in `book-form.tsx`, shared with "Editar"; the inputs are in `fields.tsx`.
 
 Reviews one draft at a time. The queue is the list of drafts:
 
@@ -91,7 +91,7 @@ const draft = drafts?.[0];
 ```
 
 - Show the banner "Preenchido automaticamente. Confira e corrija o que precisar." (not when nothing was filled in).
-- Fields: cover (`<BookCover book={draft} />`), Título, Autor, Ano, Idioma, Área, Tópicos. Editora, Local, Edição and ISBN can go in a "Mais dados" section: references need them.
+- Fields: cover (`<BookCover book={draft} />`), Título, Autor, Ano, Idioma, Área, Tópicos. Editora, Local, Edição and ISBN are always shown, and are optional: references need them.
 - Reset the form when `draft.id` changes (`key={draft.id}`).
 - Show the position in the queue ("Livro 1 de 3").
 - **Confirm:** `await confirmDraft(draft.id, formValues)`. The book appears in the library and the next draft takes its place. Announce "Livro adicionado".
@@ -99,6 +99,8 @@ const draft = drafts?.[0];
 - **Discard** (a separate, clearly named action): `deleteBook(draft.id)`, with undo through `restoreBook(draft.id)`.
 
 ## 4. Edit metadata (`editarMetadados`)
+
+**Built:** `components/modals/EditBookModal.tsx`, including delete with confirmation and undo. Collections are not in it yet.
 
 Two sections: **Dados do livro** (title, authors, year, publisher, place, edition, ISBN, language) and **Organização** (areas, topics, and optionally collections).
 
@@ -128,6 +130,8 @@ await deleteCollection(collectionId);              // books are kept
 
 ## 5. Export reference (`exportarReferencia`)
 
+**Built:** `components/modals/ExportRefModal.tsx`. "Editar" from it returns to the reference afterwards.
+
 ```ts
 const bibtex = toBibtex(book);        // string
 const abnt = toAbnt(book);            // plain string
@@ -148,13 +152,17 @@ BibTeX braces are added only around words with a capital after the first letter 
 
 No modal is designed for these yet.
 
-**Download a book:** `const file = await getBookFile(id)` returns a `File` already named `Autor - Título (Ano).ext`. Link to `URL.createObjectURL(file)` with `download={file.name}`, and revoke the URL afterwards.
+**Download a book (built):** "Baixar arquivo" in the details panel. `getBookFile(id)` returns a `File` already named `Autor - Título (Ano).ext`; `saveFile` (`lib/download.ts`) hands it to the browser.
 
-**Open a book:** call `markOpened(id)` so "Acesso recente" works. The "Abrir" button is not wired yet.
+**Open a book (built for TXT and MD):** "Abrir" shows `components/reader/ReaderModal.tsx`, a full-window `AppModal` (`fullScreen`). Opening calls `markOpened(id)` so "Acesso recente" works. The place reached is kept in `book.readPosition` (0 to 1) with `saveReadPosition`, and goes into backups. The browser's Back button closes the reader. Markdown never runs HTML or loads images. PDF and EPUB still show the "em breve" notice; for EPUB, read `personalDocs/EPUB-SECURITY.md` first.
 
-**Filters:** `filterBooks(books, { query, areas, topics, bookIds })` in `lib/books.ts`. `bookIds` is the chosen collection's list. The search box already uses `query`.
+**Search:** plain words match the title and authors only.
 
-**Export the library:**
+**Filters (built):** typed in the search box as `@área:` and `@tópico:` (also `@area:`, `@topico:`, `@topic:`), with quotes around values with spaces. `@arquivo:` (or `@file:`) filters by file type (`.txt`, `.md`, `.pdf`, `.epub`, dot optional); typing just `@arquivo` already lists the four. Syntax and suggestions are in `lib/search.ts`; highlighting and the suggestion list in `components/library/SearchBox.tsx`. Filters of the same kind add up (OR); different kinds and plain words narrow (AND).
+
+**Collections (later):** the idea is that a collection is a saved search query. That would not use the `bookIds` collections in `lib/db/books.ts` described in section 4.
+
+**Export the library (built):** settings, "Seus dados" tab.
 
 ```ts
 const { blob, fileName } = await exportLibrary({ settings }); // everything
@@ -173,15 +181,18 @@ const result = await importLibrary(zipFile); // throws if it is not readable
 - `settings` came from the backup and was not checked or applied. Ask first, then accept the theme only if it is in `THEMES` and pass the font size through `snapFontScale` (both in `lib/settings.ts`).
 - A folder of PDFs or EPUBs (no zip) goes through `addFiles`.
 
-**Storage and privacy (settings):** `storageStatus()` gives `persisted`, `usedBytes` and `quotaBytes`; `getLastExportAt()` supports a gentle backup reminder. "Apagar tudo" calls `deleteEverything()` after one confirmation (at most 2 steps, SPEC 5.2), then apply the default settings.
+**Storage and privacy (settings):** "Apagar tudo" is built, in the "Seus dados" tab, with one confirmation (at most 2 steps, SPEC 5.2). Not shown yet: `storageStatus()` gives `persisted`, `usedBytes` and `quotaBytes`; `getLastExportAt()` supports a gentle backup reminder.
 
+### Keyboard shortcuts
+
+Defined in `lib/shortcuts.ts`, handled in `Library`, listed and changed in Configurações, tab "Atalhos" (`?` opens it). They do nothing while the user types or a modal is open. Single-character ones can be remapped or turned off (WCAG 2.1.4).
 ## 7. Checklist for each modal
 
 SPEC section 11: keyboard only, focus trapped and restored, labeled for screen readers, changes announced, works at 200% zoom, no information by color alone, plain pt-BR.
 
 ## 8. Development tools
 
-`npm run dev` shows a **Dev tools** panel (bottom left) to load sample books, export, import and delete everything. It is not in the production build. Delete `components/dev/` and its use in `Library.tsx` once screens cover export, import and delete (the browser tests use them).
+`npm run dev` shows a **Dev tools** panel (bottom left) to load sample books, export, import and delete everything. It is not in the production build. Most samples are stand-ins; the Gutenberg TXT books and "Teste de Markdown" are real files (in `lib/dev/books/`) for trying the reader. Delete `components/dev/` and its use in `Library.tsx` once screens cover export, import and delete (the browser tests use them).
 
 **Testing note:** Playwright's Firefox segfaults when files are chosen in a page where axe has already run, so the browser tests run axe in Chromium only.
 
