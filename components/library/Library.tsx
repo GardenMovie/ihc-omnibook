@@ -143,7 +143,42 @@ export function Library() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  function openReader(book: Book, opener: HTMLElement) {
+  // One address per PDF while the app is open: revoking it would break
+  // reloading or saving in the tab that shows it.
+  const pdfUrls = useRef(new Map<string, string>());
+
+  /** Shows a PDF in a new tab, with the browser's own viewer. */
+  function openPdf(book: Book) {
+    setNotice(undefined);
+    // Now, during the click or key press: later it would be blocked as a pop-up.
+    const tab = window.open("", "_blank");
+    if (!tab) return setNotice({ text: t("pdf.blocked") });
+    tab.opener = null;
+    setSelectedId(book.id);
+    const known = pdfUrls.current.get(book.id);
+    const url = known
+      ? Promise.resolve(known)
+      : // getBookFile types the file as PDF, so its content cannot run as a page.
+        getBookFile(book.id).then((file) => {
+          const created = URL.createObjectURL(file);
+          pdfUrls.current.set(book.id, created);
+          return created;
+        });
+    url.then(
+      (address) => {
+        tab.location.replace(address);
+        markOpened(book.id).catch(console.error);
+      },
+      (cause) => {
+        console.error(cause);
+        tab.close();
+        setNotice({ text: t("reader.error") });
+      },
+    );
+  }
+
+  function openBook(book: Book, opener: HTMLElement) {
+    if (book.format === "pdf") return openPdf(book);
     if (!canRead(book.format)) return unavailable();
     readerOpenerRef.current = opener;
     setNotice(undefined);
@@ -252,7 +287,7 @@ export function Library() {
     else if (action === "help") openSettings("shortcuts");
     else if (!selected) return false;
     else if (action === "download") download(selected);
-    else if (action === "open") openReader(selected, here);
+    else if (action === "open") openBook(selected, here);
     else openBookModal(action, selected, here);
     return true;
   }
@@ -451,7 +486,7 @@ export function Library() {
             onEdit={(book, opener) => openBookModal("edit", book, opener)}
             onExport={(book, opener) => openBookModal("export", book, opener)}
             onDownload={download}
-            onOpen={openReader}
+            onOpen={openBook}
           />
         </div>
       </div>

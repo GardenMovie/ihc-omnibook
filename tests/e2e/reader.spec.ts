@@ -51,6 +51,27 @@ test("reads a text file and returns to the same place", async ({ page }) => {
   await expect(open).toBeVisible();
 });
 
+test("opens a PDF in a new tab, typed as PDF", async ({ page }) => {
+  // The test browsers have no PDF viewer, so check what the tab is given.
+  await page.addInitScript(() => {
+    const create = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = (blob: Blob) => {
+      document.documentElement.dataset.blobType = blob.type;
+      return create(blob);
+    };
+  });
+  await page.reload();
+  await add(page, "Artigo.pdf", "%PDF-1.4\n%%EOF");
+
+  const [tab] = await Promise.all([
+    page.waitForEvent("popup"),
+    button(page, "Abrir (abre em nova aba)").click(),
+  ]);
+  await expect(page.locator("html")).toHaveAttribute("data-blob-type", "application/pdf");
+  expect(await tab.evaluate(() => window.opener).catch(() => null)).toBeNull();
+  await expect(page.getByRole("dialog")).toBeHidden();
+});
+
 test("loads readable sample books from the developer tools", async ({ page }) => {
   await page.getByText("Dev tools").click();
   await button(page, "Load sample books").click();

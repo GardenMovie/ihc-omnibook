@@ -1,4 +1,4 @@
-import { Download, Pencil } from "lucide-react";
+import { Download, ExternalLink, Pencil } from "lucide-react";
 import {
   accessibilityBadgeText,
   accessibilityText,
@@ -119,6 +119,12 @@ export function MetadataPanel({
                 onClick={(e) => onOpen(book, e.currentTarget)}
               >
                 {t("panel.open")}
+                {book.format === "pdf" && (
+                  <>
+                    <ExternalLink aria-hidden className="size-5" />
+                    <span className="sr-only"> {t("reader.newTab")}</span>
+                  </>
+                )}
                 <KeyHint shortcut={shortcuts.open} />
               </Button>
             </ShortcutTooltip>
