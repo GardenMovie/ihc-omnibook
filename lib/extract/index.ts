@@ -1,4 +1,5 @@
 import type { BookFormat, BookMetadata } from "@/lib/db/types";
+import { fixCaps } from "@/lib/names";
 import { titleFromFileName, type Extracted } from "./common";
 
 export { formatOf } from "./common";
@@ -35,7 +36,7 @@ export async function extract(
     metadata: {
       ...found.metadata,
       title: found.metadata.title || titleFromFileName(fileName),
-      authors: found.metadata.authors ?? [],
+      authors: (found.metadata.authors ?? []).map(fixCaps),
       areas: [],
       topics: [],
     },

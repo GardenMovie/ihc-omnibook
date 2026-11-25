@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extract } from "@/lib/extract";
 import { splitAuthors } from "@/lib/extract/pdf";
+import { fixCaps } from "@/lib/names";
 import { makeEpub, makePdf } from "./fixtures";
 
 describe("EPUB", () => {
@@ -61,6 +62,17 @@ describe("PDF", () => {
   it("tells a list of authors from 'Last, First'", () => {
     expect(splitAuthors("Souza, Ana")).toEqual(["Souza, Ana"]);
     expect(splitAuthors("Ana Souza, Beto Lima")).toEqual(["Ana Souza", "Beto Lima"]);
+  });
+});
+
+describe("names in all capitals", () => {
+  it("capitalises only the first letters, leaving other names as written", () => {
+    expect(fixCaps("LOUISA MAY ALCOTT")).toBe("Louisa May Alcott");
+    expect(fixCaps("MACHADO DE ASSIS")).toBe("Machado de Assis");
+    expect(fixCaps("ALCOTT, LOUISA MAY")).toBe("Alcott, Louisa May");
+    expect(fixCaps("J.R.R. O'BRIEN-SOUZA III")).toBe("J.R.R. O'Brien-Souza III");
+    expect(fixCaps("ÉRICO VERÍSSIMO")).toBe("Érico Veríssimo");
+    for (const name of ["bell hooks", "Ronald McDonald", "IBGE"]) expect(fixCaps(name)).toBe(name);
   });
 });
 
