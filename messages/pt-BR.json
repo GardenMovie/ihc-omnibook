@@ -3,14 +3,11 @@
   "app.description": "Sua biblioteca, do seu jeito, para todo mundo.",
   "skip": "Pular para o conteúdo",
 
-  "nav.home": "Sua biblioteca",
+  "nav.home": "Omnibook",
   "search.label": "Pesquisar livros",
-  "search.placeholder": "Título, autor, área ou tópico… ( / )",
+  "search.placeholder": "Pesquisar por título, autor, área ou tópico",
   "search.clear": "Limpar busca",
-  "filter.label": "Filtrar por área",
-  "filter.all": "Todas as áreas",
   "add.button": "Adicionar",
-  "add.more": "Mais formas de adicionar",
   "add.book": "Adicionar livro",
   "add.import": "Importar biblioteca (.zip)",
 

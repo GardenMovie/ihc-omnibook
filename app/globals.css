@@ -26,7 +26,7 @@
   --popover-foreground: var(--foreground);
   /* Page canvas behind the white panels (Figma shows a soft grey) */
   --canvas: #f5f7fa;
-  --nav-h: 4.25rem;
+  --nav-h: 3.75rem;
 }
 
 [data-theme="dark"] {

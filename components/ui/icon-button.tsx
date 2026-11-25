@@ -7,22 +7,34 @@ import type { ButtonHTMLAttributes, Ref } from "react";
 export function IconButton({
   label,
   pressed,
+  variant = "outline",
   className = "",
   ref,
   children,
   ...props
 }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> & {
   label: string;
+  /** "ghost" has no visible outline until hovered; for quiet toolbar actions. */
+  variant?: "outline" | "ghost";
   /** For toggles: shows filled when on, and sets aria-pressed. */
   pressed?: boolean;
   ref?: Ref<HTMLButtonElement>;
 }) {
+  const ghost = variant === "ghost";
+  // Same 2px border in both so the size never changes (STYLE 4).
+  const shape = ghost
+    ? "rounded-full border-transparent"
+    : "rounded-md border-primary";
   const state =
     pressed === undefined
-      ? "bg-background text-primary hover:bg-accent"
+      ? ghost
+        ? "bg-transparent text-foreground hover:bg-accent"
+        : "bg-background text-primary hover:bg-accent"
       : pressed
         ? "bg-primary text-primary-foreground"
-        : "bg-background text-primary hover:bg-accent";
+        : ghost
+          ? "bg-transparent text-foreground hover:bg-accent"
+          : "bg-background text-primary hover:bg-accent";
 
   return (
     <Tooltip.Root>
@@ -32,7 +44,7 @@ export function IconButton({
           type="button"
           aria-label={label}
           aria-pressed={pressed}
-          className={`inline-flex size-12 shrink-0 items-center justify-center rounded-md border-2 border-primary text-lg font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${state} ${className}`}
+          className={`inline-flex size-12 shrink-0 items-center justify-center border-2 text-lg font-semibold transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none ${shape} ${state} ${className}`}
           {...props}
         >
           {children}

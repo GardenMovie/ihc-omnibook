@@ -27,7 +27,6 @@ import { SortMenu } from "./SortMenu";
 export function Library() {
   const [books] = useState(PLACEHOLDER_BOOKS);
   const [query, setQuery] = useState("");
-  const [area, setArea] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
   const [selectedId, setSelectedId] = useState<string | undefined>(books[0]?.id);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -58,21 +57,13 @@ export function Library() {
     applySettings(next);
   }
 
-  const areas = useMemo(
-    () => [...new Set(books.flatMap((b) => b.areas))].sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [books],
-  );
-
+  // Areas and topics are matched by the search box itself (see matchesQuery).
   const visible = useMemo(
-    () =>
-      sortBooks(
-        books.filter((b) => matchesQuery(b, query) && (!area || b.areas.includes(area))),
-        sort,
-      ),
-    [books, query, area, sort],
+    () => sortBooks(books.filter((b) => matchesQuery(b, query)), sort),
+    [books, query, sort],
   );
 
-  const filtering = query.trim() !== "" || area !== "";
+  const filtering = query.trim() !== "";
   const selected = books.find((b) => b.id === selectedId);
   const countText = filtering
     ? visible.length === 0
@@ -91,69 +82,71 @@ export function Library() {
         {t("skip")}
       </a>
 
-      <Navbar
-        query={query}
-        onQueryChange={setQuery}
-        areas={areas}
-        area={area}
-        onAreaChange={setArea}
-        onOpenSettings={() => setSettingsOpen(true)}
-        settingsButtonRef={settingsButtonRef}
-        onUnavailable={unavailable}
-      />
-      <SettingsModal
-        returnFocusRef={settingsButtonRef}
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={updateSettings}
-      />
+      {/* On wide screens the page is exactly one viewport tall. The details
+          panel spans the full height of the content area (margin to margin);
+          the sort row only takes space in the left column, above the list.
+          Both panels scroll inside themselves. */}
+      <div className="flex min-h-dvh flex-col lg:h-dvh lg:min-h-0">
+        <Navbar
+          query={query}
+          onQueryChange={setQuery}
+          onOpenSettings={() => setSettingsOpen(true)}
+          settingsButtonRef={settingsButtonRef}
+          onUnavailable={unavailable}
+        />
+        <SettingsModal
+          returnFocusRef={settingsButtonRef}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          settings={settings}
+          onChange={updateSettings}
+        />
 
-      <div className="grid flex-1 items-start gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)]">
-        <main id="conteudo" tabIndex={-1} className="min-w-0 outline-none">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6">
-            <h1 className="sr-only">{t("library.title")}</h1>
-            <SortMenu value={sort} onChange={setSort} />
-            {/* Announced politely whenever the number of books changes */}
-            <p role="status" className="text-lg text-muted-foreground">
-              {countText}
-            </p>
-          </div>
-
-          <section
-            aria-label={t("library.list")}
-            className="rounded-xl bg-background p-4 shadow-[0_1px_4px_rgb(0_0_0/0.12)]"
+        <div className="grid min-h-0 flex-1 gap-x-4 gap-y-3 px-4 pt-3 pb-4 lg:grid-cols-[minmax(0,2fr)_minmax(22rem,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
+          {/* Subgrid: the sort row and the list sit in the page grid's two rows. */}
+          <main
+            id="conteudo"
+            tabIndex={-1}
+            className="min-w-0 outline-none lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:grid lg:grid-rows-subgrid"
           >
-            {visible.length === 0 ? (
-              <div className="flex flex-col items-center gap-5 py-16 text-center">
-                <p className="text-lg">{t("library.empty")}</p>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setQuery("");
-                    setArea("");
-                  }}
-                >
-                  {t("library.clearAll")}
-                </Button>
-              </div>
-            ) : (
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] items-start gap-4">
-                {visible.map((book) => (
-                  <li key={book.id}>
-                    <BookCard
-                      book={book}
-                      selected={book.id === selectedId}
-                      onSelect={() => setSelectedId(book.id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </main>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 lg:mb-0">
+              <h1 className="sr-only">{t("library.title")}</h1>
+              <SortMenu value={sort} onChange={setSort} />
+              {/* Announced politely whenever the number of books changes */}
+              <p role="status" className="text-lg text-muted-foreground">
+                {countText}
+              </p>
+            </div>
 
-        <MetadataPanel book={selected} onUnavailable={unavailable} />
+            <section
+              aria-label={t("library.list")}
+              className="rounded-xl bg-background p-4 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:min-h-0 lg:overflow-y-auto"
+            >
+              {visible.length === 0 ? (
+                <div className="flex flex-col items-center gap-5 py-16 text-center">
+                  <p className="text-lg">{t("library.empty")}</p>
+                  <Button variant="secondary" onClick={() => setQuery("")}>
+                    {t("library.clearAll")}
+                  </Button>
+                </div>
+              ) : (
+                <ul className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] items-start gap-4">
+                  {visible.map((book) => (
+                    <li key={book.id}>
+                      <BookCard
+                        book={book}
+                        selected={book.id === selectedId}
+                        onSelect={() => setSelectedId(book.id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </main>
+
+          <MetadataPanel book={selected} onUnavailable={unavailable} />
+        </div>
       </div>
 
       {notice && (

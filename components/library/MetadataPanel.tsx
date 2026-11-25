@@ -46,7 +46,7 @@ export function MetadataPanel({
   return (
     <aside
       aria-label={t("panel.label")}
-      className="flex flex-col gap-6 rounded-xl bg-background p-6 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem-var(--nav-h))] lg:overflow-y-auto"
+      className="flex flex-col gap-6 rounded-xl bg-background p-6 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto"
     >
       {!book ? (
         <p className="py-10 text-center text-lg text-muted-foreground">{t("panel.empty")}</p>
