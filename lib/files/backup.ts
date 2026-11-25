@@ -220,6 +220,12 @@ export async function importLibrary(zipBlob: Blob): Promise<ImportResult> {
           const merged = mergeMetadata(local, metadata, metaSource);
           merged.deletedAt = undefined;
           if (item.status === "ready") merged.status = "ready";
+          // The reading place comes from whichever copy was read last.
+          if ((number(item.lastOpenedAt) ?? 0) > (local.lastOpenedAt ?? 0)) {
+            merged.readPosition = number(item.readPosition) ?? local.readPosition;
+          } else {
+            merged.readPosition = local.readPosition ?? number(item.readPosition);
+          }
           merged.lastOpenedAt =
             Math.max(local.lastOpenedAt ?? 0, number(item.lastOpenedAt) ?? 0) || undefined;
           await db.books.put(merged);
@@ -247,6 +253,7 @@ export async function importLibrary(zipBlob: Blob): Promise<ImportResult> {
             status: item.status === "draft" ? "draft" : "ready",
             addedAt: number(item.addedAt),
             lastOpenedAt: number(item.lastOpenedAt),
+            readPosition: number(item.readPosition),
             metaSource,
           },
         );

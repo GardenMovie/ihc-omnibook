@@ -64,6 +64,8 @@ export type Book = BookMetadata & {
   status: "draft" | "ready";
   addedAt: number;
   lastOpenedAt?: number;
+  /** How far the user has read, from 0 to 1. */
+  readPosition?: number;
   /** Set while the book is in the "undo delete" state. */
   deletedAt?: number;
   /** A "user" field is never overwritten by extraction or import. */

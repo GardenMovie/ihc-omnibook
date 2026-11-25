@@ -102,7 +102,10 @@ export type NewBook = {
 export async function createBook(
   input: NewBook,
   overrides: Partial<
-    Pick<Book, "id" | "status" | "addedAt" | "lastOpenedAt" | "metaSource" | "hash">
+    Pick<
+      Book,
+      "id" | "status" | "addedAt" | "lastOpenedAt" | "readPosition" | "metaSource" | "hash"
+    >
   > = {},
 ): Promise<Book> {
   // Hash first: awaiting non-database work inside a transaction would end it.
@@ -121,6 +124,7 @@ export async function createBook(
     status: overrides.status ?? "draft",
     addedAt: overrides.addedAt ?? Date.now(),
     lastOpenedAt: overrides.lastOpenedAt,
+    readPosition: overrides.readPosition,
     metaSource: overrides.metaSource ?? autoSources(metadata),
   };
   await db.transaction("rw", db.books, db.files, async () => {
@@ -173,6 +177,9 @@ export const confirmDraft = (id: string, patch: Partial<BookMetadata> = {}) =>
 
 export const markOpened = (id: string) =>
   change(id, (book) => ({ ...book, lastOpenedAt: Date.now() }));
+
+export const saveReadPosition = (id: string, position: number) =>
+  change(id, (book) => ({ ...book, readPosition: Math.min(1, Math.max(0, position)) }));
 
 /** Hides the book but keeps everything, so the user can undo. */
 export const deleteBook = (id: string) =>
