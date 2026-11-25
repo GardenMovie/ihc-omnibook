@@ -101,4 +101,25 @@ test("filters with @, downloads a book, exports and deletes everything", async (
   await expect(page.getByText("Sua biblioteca está vazia")).toBeVisible();
   await page.reload();
   await expect(page.getByText("Sua biblioteca está vazia")).toBeVisible();
+
+  // Bring the backup back, with a text size chosen since.
+  // With everything deleted, this is a first visit again.
+  await button(page, "Agora não").click();
+  await button(page, "Configurações").click();
+  await page.getByText("200%").click();
+  await page.getByRole("tab", { name: "Seus dados" }).click();
+  const input = page.getByTestId("import-input");
+  await input.setInputFiles({ name: "x.zip", mimeType: "application/zip", buffer: Buffer.from("x") });
+  await expect(page.getByRole("alert")).toContainText("Não foi possível importar");
+  await input.setInputFiles(await backup.path());
+  await expect(page.getByText("2 livros adicionados.")).toBeVisible();
+  await expectAccessible(page);
+  await input.setInputFiles(await backup.path());
+  await expect(page.getByText("2 livros já estavam na biblioteca.")).toBeVisible();
+  await button(page, "Usar as do backup").click();
+  await expect(page.getByText("Configurações do backup aplicadas.")).toBeVisible();
+  await expect(button(page, "Importar backup")).toBeFocused();
+  await expect(page.locator("html")).toHaveAttribute("style", /--font-scale: 1;/);
+  await button(page, "Fechar").click();
+  await expect(cards).toHaveCount(2);
 });

@@ -58,24 +58,28 @@ export function snapFontScale(value: number): number {
   );
 }
 
+/** Saved or imported settings may be old or edited: unknown values are dropped. */
+export function readSettings(saved: unknown): Settings {
+  const parsed = (saved ?? {}) as Partial<Settings>;
+  return {
+    theme: THEMES.includes(parsed.theme as Theme)
+      ? (parsed.theme as Theme)
+      : DEFAULT_SETTINGS.theme,
+    fontScale:
+      typeof parsed.fontScale === "number"
+        ? snapFontScale(parsed.fontScale)
+        : DEFAULT_SETTINGS.fontScale,
+    shortcuts: readShortcuts(parsed.shortcuts),
+    singleKeys: parsed.singleKeys !== false,
+    tourSeen: parsed.tourSeen === true,
+  };
+}
+
 // Browser storage can be blocked or empty: always fall back to defaults.
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<Settings>;
-    return {
-      theme: THEMES.includes(parsed.theme as Theme)
-        ? (parsed.theme as Theme)
-        : DEFAULT_SETTINGS.theme,
-      fontScale:
-        typeof parsed.fontScale === "number"
-          ? snapFontScale(parsed.fontScale)
-          : DEFAULT_SETTINGS.fontScale,
-      shortcuts: readShortcuts(parsed.shortcuts),
-      singleKeys: parsed.singleKeys !== false,
-      tourSeen: parsed.tourSeen === true,
-    };
+    return raw ? readSettings(JSON.parse(raw)) : DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState, type RefObject } from "react";
-import { Download, Trash2 } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import { saveFile } from "@/lib/download";
-import { exportLibrary } from "@/lib/files/backup";
-import { t, type MessageKey } from "@/lib/i18n";
+import { exportLibrary, importLibrary, type ImportResult } from "@/lib/files/backup";
+import { plural, t, type MessageKey } from "@/lib/i18n";
 import { deleteEverything } from "@/lib/library";
-import { FONT_SCALES, THEMES, type Settings, type Theme } from "@/lib/settings";
+import { FONT_SCALES, readSettings, THEMES, type Settings, type Theme } from "@/lib/settings";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { OptionGroup } from "@/components/ui/option-group";
@@ -21,6 +21,36 @@ const TABS = ["appearance", "shortcuts", "data"] as const;
 export type SettingsTab = (typeof TABS)[number];
 
 const danger = "border-destructive! text-destructive!";
+
+function importSummary({ added, merged, skipped, unlisted }: ImportResult): string {
+  // Files without saved data went through the normal add flow.
+  const count = (status: string) => unlisted.filter((r) => r.status === status).length;
+  const parts = [
+    { n: added, one: "data.added.one", other: "data.added.other" },
+    { n: merged + count("duplicate"), one: "data.merged.one", other: "data.merged.other" },
+    { n: count("added"), one: "data.drafts.one", other: "data.drafts.other" },
+    {
+      n: skipped + count("failed") + count("unsupported"),
+      one: "data.skipped.one",
+      other: "data.skipped.other",
+    },
+  ] as const;
+  return (
+    parts
+      .filter((part) => part.n > 0)
+      .map((part) => plural(part.n, part))
+      .join(" ") || t("data.nothingFound")
+  );
+}
+
+/** The settings of a backup, if they would change anything here. */
+function differentSettings(saved: unknown, current: Settings): Settings | undefined {
+  if (!saved) return;
+  const found = readSettings(saved);
+  const look = (s: Settings) =>
+    JSON.stringify([s.theme, s.fontScale, s.singleKeys, readSettings(s).shortcuts]);
+  return look(found) === look(current) ? undefined : found;
+}
 
 export function SettingsModal({
   open,
@@ -47,6 +77,9 @@ export function SettingsModal({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ text: MessageKey; failed?: boolean }>();
   const deleteRef = useRef<HTMLButtonElement>(null);
+  const importRef = useRef<HTMLButtonElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [imported, setImported] = useState<{ text: string; settings?: Settings }>();
 
   // Start clean on each opening.
   const [wasOpen, setWasOpen] = useState(open);
@@ -55,6 +88,7 @@ export function SettingsModal({
     setTab(initialTab);
     setConfirming(false);
     setResult(undefined);
+    setImported(undefined);
   }
 
   async function run(action: () => Promise<void>, failure: MessageKey) {
@@ -77,6 +111,30 @@ export function SettingsModal({
       saveFile(blob, fileName);
       setResult({ text: "data.exported" });
     }, "data.exportError");
+
+  const importBackup = (zip: File) =>
+    run(async () => {
+      setImported({ text: t("data.importing") });
+      try {
+        const found = await importLibrary(zip);
+        setImported({
+          text: importSummary(found),
+          settings: differentSettings(found.settings, settings),
+        });
+      } catch (cause) {
+        setImported(undefined);
+        throw cause;
+      }
+    }, "data.importError");
+
+  /** Only when asked: they replace the ones in use here. */
+  function applyBackupSettings(found: Settings) {
+    const { theme, fontScale, shortcuts, singleKeys } = found;
+    onChange({ theme, fontScale, shortcuts, singleKeys });
+    setImported({ text: t("data.settingsApplied") });
+    // The button just used is gone.
+    importRef.current?.focus();
+  }
 
   const deleteAll = () =>
     run(async () => {
@@ -246,6 +304,50 @@ export function SettingsModal({
               <p role="status" className="mt-2 text-lg font-medium">
                 {result && !result.failed && t(result.text)}
               </p>
+            </section>
+            <section
+              aria-labelledby="data-import"
+              className="flex flex-col items-start border-t border-border pt-5"
+            >
+              <h3 id="data-import" className={heading}>
+                {t("data.import")}
+              </h3>
+              <p className={hint}>{t("data.importHint")}</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".zip,application/zip"
+                data-testid="import-input"
+                hidden
+                onChange={(e) => {
+                  const zip = e.target.files?.[0];
+                  // So the same file can be chosen again.
+                  e.target.value = "";
+                  if (zip) void importBackup(zip);
+                }}
+              />
+              {/* Not disabled while busy, which would drop the focus. */}
+              <Button
+                ref={importRef}
+                aria-disabled={busy}
+                onClick={() => {
+                  if (!busy) fileRef.current?.click();
+                }}
+              >
+                <Upload aria-hidden className="size-5" />
+                {t("data.importButton")}
+              </Button>
+              <p role="status" className="mt-2 text-lg font-medium">
+                {imported?.text}
+              </p>
+              {imported?.settings && (
+                <div className="mt-2 flex flex-col items-start gap-2">
+                  <p className="text-lg">{t("data.settingsFound")}</p>
+                  <Button variant="secondary" onClick={() => applyBackupSettings(imported.settings!)}>
+                    {t("data.useSettings")}
+                  </Button>
+                </div>
+              )}
             </section>
             <section
               aria-labelledby="data-delete"

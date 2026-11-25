@@ -154,7 +154,7 @@ No modal is designed for these yet.
 
 **Download a book (built):** "Baixar arquivo" in the details panel. `getBookFile(id)` returns a `File` already named `Autor - Título (Ano).ext`; `saveFile` (`lib/download.ts`) hands it to the browser.
 
-**Open a book (built for TXT and MD):** "Abrir" shows `components/reader/ReaderModal.tsx`, a full-window `AppModal` (`fullScreen`). Opening calls `markOpened(id)` so "Acesso recente" works. The place reached is kept in `book.readPosition` (0 to 1) with `saveReadPosition`, and goes into backups. The browser's Back button closes the reader. Markdown never runs HTML or loads images. PDF and EPUB still show the "em breve" notice; for EPUB, read `personalDocs/EPUB-SECURITY.md` first.
+**Open a book (built for TXT and MD):** "Abrir" shows `components/reader/ReaderModal.tsx`, a full-window `AppModal` (`fullScreen`). Opening calls `markOpened(id)` so "Acesso recente" works. The place reached is kept in `book.readPosition` (0 to 1) with `saveReadPosition`, and goes into backups. The browser's Back button closes the reader. Markdown never runs HTML or loads images. PDF opens in a new tab with the browser's own viewer, from a `blob:` address (no reading position is kept). EPUB still shows the "em breve" notice, since browsers cannot display it; read `personalDocs/EPUB-SECURITY.md` first.
 
 **Search:** plain words match the title and authors only.
 
@@ -169,7 +169,7 @@ const { blob, fileName } = await exportLibrary({ settings }); // everything
 const some = await exportLibrary({ ids });                    // selection
 ```
 
-**Import a backup:**
+**Import a backup (built):** settings, "Seus dados" tab. It shows the counts, and offers the backup's settings only if they differ.
 
 ```ts
 const result = await importLibrary(zipFile); // throws if it is not readable
@@ -178,7 +178,7 @@ const result = await importLibrary(zipFile); // throws if it is not readable
 
 - `merged` books were already there; local user edits were kept.
 - `unlisted` are files without saved data: `AddResult`s like step 1, waiting as drafts.
-- `settings` came from the backup and was not checked or applied. Ask first, then accept the theme only if it is in `THEMES` and pass the font size through `snapFontScale` (both in `lib/settings.ts`).
+- `settings` came from the backup and was not checked or applied. Ask first, and pass it through `readSettings` (`lib/settings.ts`).
 - A folder of PDFs or EPUBs (no zip) goes through `addFiles`.
 
 **Storage and privacy (settings):** "Apagar tudo" is built, in the "Seus dados" tab, with one confirmation (at most 2 steps, SPEC 5.2). Not shown yet: `storageStatus()` gives `persisted`, `usedBytes` and `quotaBytes`; `getLastExportAt()` supports a gentle backup reminder.
