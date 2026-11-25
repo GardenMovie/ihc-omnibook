@@ -12,13 +12,15 @@ export function Navbar({
   onQueryChange,
   onOpenSettings,
   settingsButtonRef,
-  onUnavailable,
+  onAdd,
+  addButtonRef,
 }: {
+  onAdd: () => void;
+  addButtonRef: Ref<HTMLButtonElement>;
   settingsButtonRef: Ref<HTMLButtonElement>;
   query: string;
   onQueryChange: (q: string) => void;
   onOpenSettings: () => void;
-  onUnavailable: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -96,7 +98,7 @@ export function Navbar({
       </div>
 
       <div className="ml-auto flex items-center gap-3 lg:justify-self-end">
-        <Button className="rounded-full! px-5!" onClick={onUnavailable}>
+        <Button ref={addButtonRef} className="rounded-full! px-5!" onClick={onAdd}>
           <Plus aria-hidden className="size-5" strokeWidth={2.5} />
           {t("add.button")}
         </Button>

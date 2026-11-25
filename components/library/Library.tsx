@@ -5,8 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { X } from "lucide-react";
 import { filterBooks, sortBooks, type SortKey } from "@/lib/books";
-import { purgeDeleted } from "@/lib/db/books";
-import { useBooks } from "@/lib/hooks";
+import { purgeDeleted, restoreBook } from "@/lib/db/books";
+import { useBooks, useDrafts } from "@/lib/hooks";
 import { plural, t } from "@/lib/i18n";
 import {
   applySettings,
@@ -15,6 +15,7 @@ import {
   saveSettings,
   type Settings,
 } from "@/lib/settings";
+import { AddBookModal, type AddMode } from "@/components/modals/AddBookModal";
 import { Button } from "@/components/ui/button";
 import { BookCard } from "./BookCard";
 import { MetadataPanel } from "./MetadataPanel";
@@ -33,7 +34,12 @@ export function Library() {
   const [sort, setSort] = useState<SortKey>("recent");
   const [selectedId, setSelectedId] = useState<string>();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{ text: string; undo?: () => void }>();
+  const { data: drafts = [] } = useDrafts();
+  const [addMode, setAddMode] = useState<AddMode | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  // Whatever opened the add modal gets focus back.
+  const addOpenerRef = useRef<HTMLElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -91,7 +97,24 @@ export function Library() {
       : plural(visible.length, { one: "results.one", other: "results.other" })
     : plural(visible.length, { one: "library.count.one", other: "library.count.other" });
 
-  const unavailable = () => setNotice(t("toast.soon"));
+  const unavailable = () => setNotice({ text: t("toast.soon") });
+
+  function openAdd(mode: AddMode, opener: HTMLElement | null) {
+    addOpenerRef.current = opener;
+    setNotice(undefined);
+    setAddMode(mode);
+  }
+
+  /** Closes the add modal when the opener may be about to disappear. */
+  function finishAdd() {
+    addOpenerRef.current = addButtonRef.current;
+    setAddMode(null);
+  }
+
+  function showBook(id: string) {
+    setQuery("");
+    setSelectedId(id);
+  }
 
   return (
     <Tooltip.Provider delayDuration={300}>
@@ -112,7 +135,35 @@ export function Library() {
           onQueryChange={setQuery}
           onOpenSettings={() => setSettingsOpen(true)}
           settingsButtonRef={settingsButtonRef}
-          onUnavailable={unavailable}
+          onAdd={() => openAdd("upload", addButtonRef.current)}
+          addButtonRef={addButtonRef}
+        />
+        <AddBookModal
+          mode={addMode}
+          drafts={drafts}
+          returnFocusRef={addOpenerRef}
+          onModeChange={setAddMode}
+          onShowBook={(id) => {
+            showBook(id);
+            finishAdd();
+          }}
+          onAdded={(book) => {
+            showBook(book.id);
+            setNotice({ text: t("details.added", { title: book.title }) });
+            finishAdd();
+          }}
+          onDiscardedLast={(book) => {
+            setNotice({
+              text: t("details.discarded", { title: book.title }),
+              undo: () => {
+                restoreBook(book.id).then(
+                  () => setNotice({ text: t("details.restored", { title: book.title }) }),
+                  () => setNotice({ text: t("details.saveError") }),
+                );
+              },
+            });
+            finishAdd();
+          }}
         />
         <SettingsModal
           returnFocusRef={settingsButtonRef}
@@ -132,6 +183,14 @@ export function Library() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-x-6 lg:mb-0">
               <h1 className="sr-only">{t("library.title")}</h1>
               <SortMenu value={sort} onChange={setSort} />
+              {drafts.length > 0 && (
+                <Button
+                  variant="secondary"
+                  onClick={(e) => openAdd("review", e.currentTarget)}
+                >
+                  {plural(drafts.length, { one: "add.review.one", other: "add.review.other" })}
+                </Button>
+              )}
               {/* Announced politely whenever the number of books changes */}
               <p role="status" className="text-lg text-muted-foreground">
                 {countText}
@@ -175,22 +234,31 @@ export function Library() {
 
       {DevTools && <DevTools />}
 
-      {notice && (
-        <div
-          role="status"
-          className="fixed right-4 bottom-4 left-4 z-50 mx-auto flex max-w-xl items-center gap-4 rounded-lg bg-foreground py-3 pr-2 pl-5 text-lg text-background shadow-[0_12px_40px_rgb(0_0_0/0.25)]"
-        >
-          <span className="flex-1">{notice}</span>
-          <button
-            type="button"
-            aria-label={t("toast.close")}
-            onClick={() => setNotice("")}
-            className="inline-flex size-11 items-center justify-center rounded-md hover:bg-background/20"
-          >
-            <X aria-hidden className="size-5" />
-          </button>
-        </div>
-      )}
+      {/* The live region stays mounted, or screen readers may miss the text. */}
+      <div role="status" className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-xl">
+        {notice && (
+          <div className="flex items-center gap-4 rounded-lg bg-foreground py-3 pr-2 pl-5 text-lg text-background shadow-[0_12px_40px_rgb(0_0_0/0.25)]">
+            <span className="min-w-0 flex-1 break-words">{notice.text}</span>
+            {notice.undo && (
+              <button
+                type="button"
+                onClick={notice.undo}
+                className="min-h-11 rounded-md px-3 font-semibold underline hover:bg-background/20"
+              >
+                {t("toast.undo")}
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label={t("toast.close")}
+              onClick={() => setNotice(undefined)}
+              className="inline-flex size-11 items-center justify-center rounded-md hover:bg-background/20"
+            >
+              <X aria-hidden className="size-5" />
+            </button>
+          </div>
+        )}
+      </div>
     </Tooltip.Provider>
   );
 }
