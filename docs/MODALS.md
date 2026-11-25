@@ -48,6 +48,8 @@ Rules:
 
 ## 2. Add book, step 1: upload (`addLivroUpload`)
 
+**Built:** `components/modals/AddBookModal.tsx` (both steps, queue, discard and undo) and `UploadStep.tsx`.
+
 Three ways in, all required: the **"Escolher arquivos"** button (`<input type="file" multiple accept=".pdf,.epub,.txt,.md,.markdown">`), drag and drop, and paste. Each gives a list of `File`s:
 
 ```ts
@@ -71,13 +73,15 @@ Handle each `result.status`:
 | `failed`, `reason: "storage-full"` | No space left | Say so; suggest exporting and removing books |
 | `failed`, `reason: "unknown"` | Anything else | Name the file, offer to try again |
 
-`duplicate` can point to a draft (added before, never confirmed); in that case open step 2 for it.
+`duplicate` can point to a draft (added before, never confirmed); the modal says it is waiting for review, and "Continuar" opens the queue.
 
 To let the user turn auto-fill off (SPEC 5.2), call `addFile(file, { autoFill: false })` for each file.
 
 The first add asks the browser to keep the data (`navigator.storage.persist()`). Firefox may show its own permission prompt.
 
 ## 3. Add book, step 2: details (`addLivroDetalhes`)
+
+**Built:** `components/modals/DetailsStep.tsx`. The form fields in `components/modals/fields.tsx` (text field, one input per author, chips) are meant to be reused by "Editar".
 
 Reviews one draft at a time. The queue is the list of drafts:
 
@@ -177,7 +181,9 @@ SPEC section 11: keyboard only, focus trapped and restored, labeled for screen r
 
 ## 8. Development tools
 
-Until step 1 exists, `npm run dev` shows a **Dev tools** panel (bottom left) to add files (skipping review), load sample books, export, import and delete everything. It is not in the production build. Delete `components/dev/` and its use in `Library.tsx` once the modals cover this.
+`npm run dev` shows a **Dev tools** panel (bottom left) to load sample books, export, import and delete everything. It is not in the production build. Delete `components/dev/` and its use in `Library.tsx` once screens cover export, import and delete (the browser tests use them).
+
+**Testing note:** Playwright's Firefox segfaults when files are chosen in a page where axe has already run, so the browser tests run axe in Chromium only.
 
 ## 9. Not done yet
 
