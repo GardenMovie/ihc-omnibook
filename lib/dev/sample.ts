@@ -1,6 +1,7 @@
 /**
  * Development only. Real textbook titles used to preview the UI; years and
- * metadata are illustrative, and each "file" is a small stand-in.
+ * metadata are illustrative, and each "file" is a small stand-in, except for
+ * the TXT and Markdown books of ./books, which can be read.
  */
 import { createBook, getBook } from "@/lib/db/books";
 import type { BookAccessibility, BookFormat } from "@/lib/db/types";
@@ -20,6 +21,8 @@ type Sample = {
   added: number;
   opened?: number;
   accessibility?: BookAccessibility;
+  /** A real file, served by the development server. */
+  file?: URL;
 };
 
 const pdfUa: BookAccessibility = { status: "yes", notes: "PDF/UA" };
@@ -41,15 +44,27 @@ const SAMPLES: Sample[] = [
   { id: "numerical-analysis", title: "Numerical Analysis", authors: ["Richard L. Burden", "J. Douglas Faires"], year: 2010, language: "en", areas: ["Matemática", "Computação"], topics: ["Cálculo numérico"], format: "pdf", added: 55, opened: 7, accessibility: pdfUa },
   { id: "metodologia-exemplo", title: "Metodologia da Pesquisa (exemplo)", authors: ["Autora Exemplo", "Autor Exemplo", "Terceira Autora Exemplo"], year: 2021, language: "pt-BR", areas: ["Metodologia"], topics: ["Pesquisa científica", "Escrita acadêmica"], format: "epub", added: 4, opened: 4, accessibility: epub11 },
   { id: "notas-calculo-exemplo", title: "Notas de Aula de Cálculo (exemplo)", authors: ["Prof. Exemplo"], language: "pt-BR", areas: ["Matemática"], topics: ["Cálculo diferencial e integral"], format: "md", added: 1 },
+  // Project Gutenberg #55752, #11 and #2600 (a very long one), public domain,
+  // licence text included.
+  { id: "war-and-peace", title: "War and Peace", authors: ["Leo Tolstoy"], year: 1869, language: "en", areas: ["Literatura"], topics: ["Romance"], format: "txt", added: 5, file: new URL("./books/war-and-peace.txt", import.meta.url) },
+  { id: "dom-casmurro", title: "Dom Casmurro", authors: ["Machado de Assis"], year: 1899, language: "pt-BR", areas: ["Literatura"], topics: ["Romance"], format: "txt", added: 3, file: new URL("./books/dom-casmurro.txt", import.meta.url) },
+  { id: "alice", title: "Alice's Adventures in Wonderland", authors: ["Lewis Carroll"], year: 1865, language: "en", areas: ["Literatura"], topics: ["Literatura infantil"], format: "txt", added: 2, file: new URL("./books/alice.txt", import.meta.url) },
+  { id: "teste-markdown", title: "Teste de Markdown", authors: ["Autor Exemplo"], language: "pt-BR", areas: ["Metodologia"], topics: ["Teste do leitor"], format: "md", added: 0, file: new URL("./books/teste-markdown.md", import.meta.url) },
 ];
+
+async function contents(url: URL): Promise<Blob> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Sample file ${url.pathname}: ${response.status}`);
+  return response.blob();
+}
 
 export async function loadSamples(): Promise<void> {
   const now = Date.now();
-  for (const { id, format, added, opened, ...metadata } of SAMPLES) {
+  for (const { id, format, added, opened, file, ...metadata } of SAMPLES) {
     if (await getBook(id)) continue;
     await createBook(
       {
-        file: new Blob([`Arquivo de exemplo: ${metadata.title}`]),
+        file: file ? await contents(file) : new Blob([`Arquivo de exemplo: ${metadata.title}`]),
         fileName: `${id}.${format}`,
         format,
         metadata,
