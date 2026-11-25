@@ -24,7 +24,13 @@ export function AppModal({
   onConfirm,
   maxWidth = "910px",
   returnFocusRef,
+  footer,
+  dismissOnOutside = true,
 }: {
+  /** Replaces the default buttons, for modals with other actions. */
+  footer?: ReactNode;
+  /** False for forms, so a stray click does not throw away what was typed. */
+  dismissOnOutside?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -49,23 +55,35 @@ export function AppModal({
           style={{ maxWidth }}
           // Give focus back to whatever opened the modal (STYLE 4).
           onCloseAutoFocus={(event) => {
-            if (returnFocusRef?.current) {
+            if (returnFocusRef?.current?.isConnected) {
               event.preventDefault();
               returnFocusRef.current.focus();
+            }
+          }}
+          onInteractOutside={(event) => {
+            if (!dismissOnOutside) event.preventDefault();
+          }}
+          // Fields that use Escape themselves keep the modal open.
+          onEscapeKeyDown={(event) => {
+            if ((event.target as HTMLElement).closest("[data-own-escape]")) {
+              event.preventDefault();
             }
           }}
           // Start on the first field, not the close button (whose tooltip
           // would pop up on open). Falls back to Radix's default.
           onOpenAutoFocus={(event) => {
-            const first = (event.currentTarget as HTMLElement).querySelector<HTMLElement>(
-              "[data-modal-body] input:checked, [data-modal-body] input, [data-modal-body] textarea, [data-modal-body] select",
-            );
+            const content = event.currentTarget as HTMLElement;
+            const first =
+              content.querySelector<HTMLElement>("[data-autofocus]") ??
+              content.querySelector<HTMLElement>(
+                "[data-modal-body] input:checked, [data-modal-body] input:not([type=file]), [data-modal-body] textarea, [data-modal-body] select",
+              );
             if (first) {
               event.preventDefault();
               first.focus();
             }
           }}
-          className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-xl border-2 border-border bg-background p-6 text-foreground shadow-[0_12px_40px_rgb(0_0_0/0.25)]"
+          className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col gap-5 overflow-y-auto rounded-xl border-2 border-border bg-background p-6 text-foreground shadow-[0_12px_40px_rgb(0_0_0/0.25)]"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -85,20 +103,31 @@ export function AppModal({
             </Dialog.Close>
           </div>
 
-          <div data-modal-body className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1 py-1">{children}</div>
+          {/* The minimum keeps the content usable at large text sizes: below it,
+              the whole dialog scrolls instead. */}
+          <div
+            data-modal-body
+            className="-mx-1 min-h-[min(14rem,40dvh)] flex-1 overflow-y-auto px-1 py-1"
+          >
+            {children}
+          </div>
 
-          <div className="flex justify-end gap-4">
-            {cancelLabel && (
-              <Dialog.Close asChild>
-                <Button variant="secondary">{cancelLabel}</Button>
-              </Dialog.Close>
-            )}
-            {onConfirm ? (
-              <Button onClick={onConfirm}>{confirmLabel ?? t("modal.closeButton")}</Button>
-            ) : (
-              <Dialog.Close asChild>
-                <Button>{confirmLabel ?? t("modal.closeButton")}</Button>
-              </Dialog.Close>
+          <div className="flex flex-wrap justify-end gap-4">
+            {footer ?? (
+              <>
+                {cancelLabel && (
+                  <Dialog.Close asChild>
+                    <Button variant="secondary">{cancelLabel}</Button>
+                  </Dialog.Close>
+                )}
+                {onConfirm ? (
+                  <Button onClick={onConfirm}>{confirmLabel ?? t("modal.closeButton")}</Button>
+                ) : (
+                  <Dialog.Close asChild>
+                    <Button>{confirmLabel ?? t("modal.closeButton")}</Button>
+                  </Dialog.Close>
+                )}
+              </>
             )}
           </div>
         </Dialog.Content>
