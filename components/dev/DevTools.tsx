@@ -7,6 +7,7 @@
 import { useRef, useState } from "react";
 import { confirmDraft } from "@/lib/db/books";
 import { loadSamples } from "@/lib/dev/sample";
+import { exportLibrary, importLibrary } from "@/lib/files/backup";
 import { addFiles, deleteEverything } from "@/lib/library";
 
 const button = "min-h-11 rounded-md border-2 border-input px-3 hover:bg-accent";
@@ -21,6 +22,19 @@ export default function DevTools() {
       if (result.status === "added") await confirmDraft(result.book.id);
     }
     setMessage(results.map((r) => r.status).join(", "));
+  }
+
+  async function download() {
+    const { blob, fileName } = await exportLibrary();
+    const url = URL.createObjectURL(blob);
+    const link = Object.assign(document.createElement("a"), { href: url, download: fileName });
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
+  async function restore(zip: File) {
+    const { added, merged, skipped } = await importLibrary(zip);
+    setMessage(`added ${added}, merged ${merged}, skipped ${skipped}`);
   }
 
   return (
@@ -45,6 +59,22 @@ export default function DevTools() {
         <button type="button" className={button} onClick={() => void loadSamples()}>
           Load sample books
         </button>
+        <button type="button" className={button} onClick={() => void download()}>
+          Export backup
+        </button>
+        <label className="flex flex-col">
+          Import backup
+          <input
+            data-testid="dev-import"
+            type="file"
+            accept=".zip"
+            onChange={(e) => {
+              const zip = e.target.files?.[0];
+              if (zip) void restore(zip);
+              e.target.value = "";
+            }}
+          />
+        </label>
         <button
           type="button"
           className={button}
