@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Book } from "@/lib/db/types";
 import { bookFileName, uniqueFileName } from "@/lib/files/filename";
 import { parseName } from "@/lib/names";
-import { toAbnt } from "@/lib/refs/abnt";
+import { toAbnt, toAbntHtml } from "@/lib/refs/abnt";
 import { toBibtex, toBibtexFile } from "@/lib/refs/bibtex";
 import { missingFields } from "@/lib/refs/missing";
 
@@ -78,6 +78,12 @@ describe("BibTeX", () => {
 });
 
 describe("ABNT", () => {
+  it("builds HTML with a bold title and escaped text", () => {
+    const html = toAbntHtml(book({ title: "Sets <A> & B", edition: undefined }));
+    expect(html).toContain("<strong>Sets &lt;A&gt; &amp; B</strong>");
+    expect(html).toContain("Editora &amp; Cia");
+  });
+
   it("formats a full reference", () => {
     expect(toAbnt(book())).toBe(
       "UCHÔA, Maria. Optimizing DNA Storage: a survey. 2. ed. São Paulo: Editora & Cia, 2026.",

@@ -60,3 +60,12 @@ export const toAbnt = (book: BookMetadata) =>
   toAbntParts(book)
     .map((p) => p.text)
     .join("");
+
+const escapeHtml = (text: string) =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+/** For the clipboard, so word processors keep the title in bold. */
+export const toAbntHtml = (book: BookMetadata) =>
+  toAbntParts(book)
+    .map((p) => (p.bold ? `<strong>${escapeHtml(p.text)}</strong>` : escapeHtml(p.text)))
+    .join("");
