@@ -4,7 +4,7 @@ import { t } from "@/lib/i18n";
 // metaSource arrive with the storage layer; for now covers are generated.
 /**
  * Accessibility of the book file (SPEC section 7). `notes` names the standard
- * the file claims, e.g. "PDF/UA" or "WCAG 2.x AA". Absent for plain text
+ * the file claims, e.g. "PDF/UA" or "EPUB 1.1 (W3C)". Absent for plain text
  * (txt/md), which is inherently accessible and has nothing to declare.
  */
 export type BookAccessibility = {
@@ -159,7 +159,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "epub",
     addedAt: NOW - 33 * DAY,
     lastOpenedAt: NOW - 9 * DAY,
-    accessibility: { status: "yes", notes: "WCAG 2.x AA" },
+    accessibility: { status: "yes", notes: "EPUB 1.1 (W3C)" },
     cover: { from: "#e6dcb8", to: "#c9bb8a", text: "#3b3320" },
   },
   {
@@ -271,7 +271,7 @@ export const PLACEHOLDER_BOOKS: Book[] = [
     format: "epub",
     addedAt: NOW - 4 * DAY,
     lastOpenedAt: NOW - 4 * DAY,
-    accessibility: { status: "yes", notes: "WCAG 2.x AA" },
+    accessibility: { status: "yes", notes: "EPUB 1.1 (W3C)" },
     cover: { from: "#0b6b5b", to: "#0b3d37", text: "#ffffff" },
   },
   {

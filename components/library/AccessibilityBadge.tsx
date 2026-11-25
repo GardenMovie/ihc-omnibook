@@ -9,7 +9,7 @@ import {
 /**
  * Accessibility pill with short text. Meaning is in the shape AND the words,
  * never color alone:
- *   yes      solid pill, check + the standard ("PDF/UA", "WCAG 2.x AA")
+ *   yes      solid pill, check + the standard ("PDF/UA", "EPUB 1.1 (W3C)")
  *   partial  dashed outline, check + "Parcial"
  *   unknown  dotted outline, "?" + "Não verificado"
  *   no       nothing is drawn (the card's accessible name still says so)
