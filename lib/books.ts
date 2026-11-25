@@ -2,22 +2,35 @@
 import type { Book, BookAccessibility } from "@/lib/db/types";
 import { t } from "@/lib/i18n";
 import { surname } from "@/lib/names";
+import { fileTypeMatches, isPartialKeyword, norm, parseQuery, termMatches } from "@/lib/search";
 
 export type { Book, BookAccessibility };
 
 export type SortKey = "recent" | "title" | "author" | "year" | "added";
 export const SORT_KEYS: SortKey[] = ["recent", "title", "author", "year", "added"];
 
-const norm = (s: string) =>
-  s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-
+/**
+ * Plain words must all appear in the title or authors. "@área:", "@tópico:" and
+ * "@arquivo:" filters (see lib/search.ts) match any of the values of one kind,
+ * and every kind used.
+ */
 export function matchesQuery(book: Book, query: string): boolean {
-  const q = norm(query.trim());
-  if (!q) return true;
-  const haystack = norm(
-    [book.title, ...book.authors, ...book.areas, ...book.topics, book.year ?? ""].join(" "),
+  const haystack = norm([book.title, ...book.authors].join(" "));
+  const wanted = { area: [] as string[], topic: [] as string[], file: [] as string[] };
+  for (const token of parseQuery(query)) {
+    if (token.kind !== "text") {
+      if (token.value.trim()) wanted[token.kind].push(token.value);
+    } else if (!isPartialKeyword(token.value) && !haystack.includes(norm(token.value))) {
+      return false;
+    }
+  }
+  const any = (values: string[], terms: string[]) =>
+    !values.length || values.some((value) => terms.some((term) => termMatches(term, value)));
+  return (
+    any(wanted.area, book.areas) &&
+    any(wanted.topic, book.topics) &&
+    (!wanted.file.length || wanted.file.some((value) => fileTypeMatches(book.format, value)))
   );
-  return q.split(/\s+/).every((word) => haystack.includes(word));
 }
 
 export type BookFilter = {

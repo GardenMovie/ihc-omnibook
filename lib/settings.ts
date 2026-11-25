@@ -1,3 +1,5 @@
+import { ACTIONS, type Shortcuts } from "@/lib/shortcuts";
+
 export type Theme =
   | "system"
   | "light"
@@ -11,13 +13,33 @@ export type Settings = {
   theme: Theme;
   /** 0.85 to 2.0, default 1 (SPEC section 7) */
   fontScale: number;
+  shortcuts: Shortcuts;
+  /** False turns off the shortcuts that are a single character. */
+  singleKeys: boolean;
+  /** The walkthrough was opened or declined, so it is not offered again. */
+  tourSeen: boolean;
 };
 
 /** The three text sizes offered in settings: 100%, 150%, 200%. */
 export const FONT_SCALES = [1, 1.5, 2];
 export const SETTINGS_KEY = "omnibook-settings";
 
-export const DEFAULT_SETTINGS: Settings = { theme: "system", fontScale: 1 };
+export const DEFAULT_SETTINGS: Settings = {
+  theme: "system",
+  fontScale: 1,
+  shortcuts: {},
+  singleKeys: true,
+  tourSeen: false,
+};
+
+function readShortcuts(saved: unknown): Shortcuts {
+  const found: Shortcuts = {};
+  for (const action of ACTIONS) {
+    const key = (saved as Shortcuts | undefined)?.[action];
+    if (typeof key === "string" && key) found[action] = key;
+  }
+  return found;
+}
 
 export const THEMES: Theme[] = [
   "system",
@@ -50,6 +72,9 @@ export function loadSettings(): Settings {
         typeof parsed.fontScale === "number"
           ? snapFontScale(parsed.fontScale)
           : DEFAULT_SETTINGS.fontScale,
+      shortcuts: readShortcuts(parsed.shortcuts),
+      singleKeys: parsed.singleKeys !== false,
+      tourSeen: parsed.tourSeen === true,
     };
   } catch {
     return DEFAULT_SETTINGS;
