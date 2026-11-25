@@ -1,31 +1,9 @@
+/** Searching, sorting and describing books for the screens. */
+import type { Book, BookAccessibility } from "@/lib/db/types";
 import { t } from "@/lib/i18n";
+import { surname } from "@/lib/names";
 
-// Subset of the Book type in SPEC section 7. Files, covers in OPFS and
-// metaSource arrive with the storage layer; for now covers are generated.
-/**
- * Accessibility of the book file (SPEC section 7). `notes` names the standard
- * the file claims, e.g. "PDF/UA" or "EPUB 1.1 (W3C)". Absent for plain text
- * (txt/md), which is inherently accessible and has nothing to declare.
- */
-export type BookAccessibility = {
-  status: "yes" | "partial" | "no" | "unknown";
-  notes?: string;
-};
-
-export type Book = {
-  id: string;
-  title: string;
-  authors: string[];
-  year?: number;
-  language?: string;
-  areas: string[];
-  topics: string[];
-  format: "pdf" | "epub" | "txt" | "md";
-  addedAt: number;
-  lastOpenedAt?: number;
-  accessibility?: BookAccessibility;
-  cover: { from: string; to: string; text: string };
-};
+export type { Book, BookAccessibility };
 
 export type SortKey = "recent" | "title" | "author" | "year" | "added";
 export const SORT_KEYS: SortKey[] = ["recent", "title", "author", "year", "added"];
@@ -42,7 +20,27 @@ export function matchesQuery(book: Book, query: string): boolean {
   return q.split(/\s+/).every((word) => haystack.includes(word));
 }
 
-const surname = (name: string) => name.trim().split(/\s+/).at(-1) ?? name;
+export type BookFilter = {
+  query?: string;
+  /** A book matches if it has any of the chosen values; groups combine with "and". */
+  areas?: string[];
+  topics?: string[];
+  /** The `bookIds` of the chosen collection. */
+  bookIds?: string[];
+};
+
+export function filterBooks(books: Book[], filter: BookFilter): Book[] {
+  const any = (chosen: string[] | undefined, has: string[]) =>
+    !chosen?.length || chosen.some((c) => has.some((h) => norm(h) === norm(c)));
+  const ids = filter.bookIds && new Set(filter.bookIds);
+  return books.filter(
+    (book) =>
+      matchesQuery(book, filter.query ?? "") &&
+      any(filter.areas, book.areas) &&
+      any(filter.topics, book.topics) &&
+      (!ids || ids.has(book.id)),
+  );
+}
 
 export function sortBooks(books: Book[], key: SortKey): Book[] {
   const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
@@ -50,7 +48,8 @@ export function sortBooks(books: Book[], key: SortKey): Book[] {
   copy.sort((a, b) => {
     switch (key) {
       case "recent":
-        return (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0);
+        // Never opened books come last, newest first.
+        return (b.lastOpenedAt ?? 0) - (a.lastOpenedAt ?? 0) || b.addedAt - a.addedAt;
       case "title":
         return collator.compare(a.title, b.title);
       case "author":
@@ -112,177 +111,3 @@ export function languageLabel(code?: string): string {
     return code;
   }
 }
-
-const DAY = 86_400_000;
-const NOW = Date.now();
-
-// PLACEHOLDER DATA: real textbook titles used only to preview the UI.
-// Years and metadata are illustrative, not authoritative. Replaced by the
-// Dexie-backed library later.
-export const PLACEHOLDER_BOOKS: Book[] = [
-  {
-    id: "calculus",
-    title: "Calculus Early Vectors",
-    authors: ["James Stewart"],
-    year: 2012,
-    language: "en-US",
-    areas: ["Matemática"],
-    topics: ["Cálculo diferencial e integral"],
-    format: "pdf",
-    addedAt: NOW - 40 * DAY,
-    lastOpenedAt: NOW - 1 * DAY,
-    accessibility: { status: "yes", notes: "PDF/UA" },
-    cover: { from: "#7a1020", to: "#12080c", text: "#ffffff" },
-  },
-  {
-    id: "intro-linear-algebra",
-    title: "Introduction to Linear Algebra",
-    authors: ["Gilbert Strang"],
-    year: 2003,
-    language: "en",
-    areas: ["Matemática"],
-    topics: ["Álgebra linear", "Matrizes"],
-    format: "pdf",
-    addedAt: NOW - 35 * DAY,
-    lastOpenedAt: NOW - 3 * DAY,
-    accessibility: { status: "partial", notes: "PDF etiquetado, sem PDF/UA" },
-    cover: { from: "#0f5a24", to: "#062b12", text: "#ffffff" },
-  },
-  {
-    id: "linear-algebra-applications",
-    title: "Linear Algebra and Its Applications",
-    authors: ["Gilbert Strang"],
-    year: 2006,
-    language: "en",
-    areas: ["Matemática"],
-    topics: ["Álgebra linear", "Aplicações"],
-    format: "epub",
-    addedAt: NOW - 33 * DAY,
-    lastOpenedAt: NOW - 9 * DAY,
-    accessibility: { status: "yes", notes: "EPUB 1.1 (W3C)" },
-    cover: { from: "#e6dcb8", to: "#c9bb8a", text: "#3b3320" },
-  },
-  {
-    id: "linear-algebra-data",
-    title: "Linear Algebra and Learning from Data",
-    authors: ["Gilbert Strang"],
-    year: 2019,
-    language: "en",
-    areas: ["Matemática", "Ciência de dados"],
-    topics: ["Álgebra linear", "Aprendizado de máquina"],
-    format: "pdf",
-    addedAt: NOW - 20 * DAY,
-    lastOpenedAt: NOW - 2 * DAY,
-    accessibility: { status: "no" },
-    cover: { from: "#2f6fa8", to: "#9ec3e0", text: "#ffffff" },
-  },
-  {
-    id: "discrete-math",
-    title: "Discrete Mathematics and Its Applications",
-    authors: ["Kenneth H. Rosen"],
-    year: 2012,
-    language: "en",
-    areas: ["Matemática", "Computação"],
-    topics: ["Matemática discreta", "Teoria dos grafos"],
-    format: "pdf",
-    addedAt: NOW - 60 * DAY,
-    lastOpenedAt: NOW - 30 * DAY,
-    accessibility: { status: "unknown" },
-    cover: { from: "#1c1c1f", to: "#050505", text: "#f2f2f2" },
-  },
-  {
-    id: "real-complex-analysis",
-    title: "Real and Complex Analysis",
-    authors: ["Walter Rudin"],
-    year: 1987,
-    language: "en",
-    areas: ["Matemática"],
-    topics: ["Análise real", "Análise complexa"],
-    format: "pdf",
-    addedAt: NOW - 90 * DAY,
-    lastOpenedAt: NOW - 45 * DAY,
-    accessibility: { status: "unknown" },
-    cover: { from: "#16261d", to: "#0a120e", text: "#b9c9bd" },
-  },
-  {
-    id: "probability-applications",
-    title: "Probability and Its Applications",
-    authors: ["William Feller"],
-    year: 1971,
-    language: "en",
-    areas: ["Matemática", "Estatística"],
-    topics: ["Probabilidade"],
-    format: "pdf",
-    addedAt: NOW - 80 * DAY,
-    lastOpenedAt: NOW - 12 * DAY,
-    accessibility: { status: "no" },
-    cover: { from: "#16228a", to: "#0b1250", text: "#ffffff" },
-  },
-  {
-    id: "probability-theory",
-    title: "Probability Theory",
-    authors: ["E. T. Jaynes"],
-    year: 2003,
-    language: "en",
-    areas: ["Matemática", "Estatística"],
-    topics: ["Probabilidade", "Inferência bayesiana"],
-    format: "epub",
-    addedAt: NOW - 15 * DAY,
-    lastOpenedAt: NOW - 5 * DAY,
-    accessibility: { status: "partial", notes: "Metadados de acessibilidade incompletos" },
-    cover: { from: "#1a1aff", to: "#7d2bd6", text: "#ffffff" },
-  },
-  {
-    id: "probability-statistics-engineering",
-    title: "Probability and Statistics for Engineering",
-    authors: ["Jay L. Devore"],
-    year: 2011,
-    language: "en",
-    areas: ["Estatística", "Engenharia"],
-    topics: ["Probabilidade", "Estatística aplicada"],
-    format: "pdf",
-    addedAt: NOW - 70 * DAY,
-    lastOpenedAt: NOW - 20 * DAY,
-    accessibility: { status: "unknown" },
-    cover: { from: "#c2152b", to: "#7b0d1a", text: "#ffffff" },
-  },
-  {
-    id: "numerical-analysis",
-    title: "Numerical Analysis",
-    authors: ["Richard L. Burden", "J. Douglas Faires"],
-    year: 2010,
-    language: "en",
-    areas: ["Matemática", "Computação"],
-    topics: ["Cálculo numérico"],
-    format: "pdf",
-    addedAt: NOW - 55 * DAY,
-    lastOpenedAt: NOW - 7 * DAY,
-    accessibility: { status: "yes", notes: "PDF/UA" },
-    cover: { from: "#f1e4d4", to: "#d98a5a", text: "#3a2416" },
-  },
-  {
-    id: "metodologia-exemplo",
-    title: "Metodologia da Pesquisa (exemplo)",
-    authors: ["Autora Exemplo", "Autor Exemplo", "Terceira Autora Exemplo"],
-    year: 2021,
-    language: "pt-BR",
-    areas: ["Metodologia"],
-    topics: ["Pesquisa científica", "Escrita acadêmica"],
-    format: "epub",
-    addedAt: NOW - 4 * DAY,
-    lastOpenedAt: NOW - 4 * DAY,
-    accessibility: { status: "yes", notes: "EPUB 1.1 (W3C)" },
-    cover: { from: "#0b6b5b", to: "#0b3d37", text: "#ffffff" },
-  },
-  {
-    id: "notas-calculo-exemplo",
-    title: "Notas de Aula de Cálculo (exemplo)",
-    authors: ["Prof. Exemplo"],
-    language: "pt-BR",
-    areas: ["Matemática"],
-    topics: ["Cálculo diferencial e integral"],
-    format: "md",
-    addedAt: NOW - 1 * DAY,
-    cover: { from: "#b45309", to: "#7a3606", text: "#ffffff" },
-  },
-];

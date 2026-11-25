@@ -1,14 +1,12 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { X } from "lucide-react";
-import {
-  matchesQuery,
-  PLACEHOLDER_BOOKS,
-  sortBooks,
-  type SortKey,
-} from "@/lib/books";
+import { filterBooks, sortBooks, type SortKey } from "@/lib/books";
+import { purgeDeleted } from "@/lib/db/books";
+import { useBooks } from "@/lib/hooks";
 import { plural, t } from "@/lib/i18n";
 import {
   applySettings,
@@ -24,11 +22,16 @@ import { Navbar } from "./Navbar";
 import { SettingsModal } from "./SettingsModal";
 import { SortMenu } from "./SortMenu";
 
+const DevTools =
+  process.env.NODE_ENV === "development"
+    ? dynamic(() => import("@/components/dev/DevTools"), { ssr: false })
+    : null;
+
 export function Library() {
-  const [books] = useState(PLACEHOLDER_BOOKS);
+  const { data: books, error } = useBooks();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("recent");
-  const [selectedId, setSelectedId] = useState<string | undefined>(books[0]?.id);
+  const [selectedId, setSelectedId] = useState<string>();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [notice, setNotice] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -39,6 +42,11 @@ export function Library() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(loadSettings());
+  }, []);
+
+  // Free the space of books deleted in earlier sessions.
+  useEffect(() => {
+    purgeDeleted().catch(console.error);
   }, []);
 
   // Follow the system theme live while "Automático" is selected.
@@ -59,13 +67,25 @@ export function Library() {
 
   // Areas and topics are matched by the search box itself (see matchesQuery).
   const visible = useMemo(
-    () => sortBooks(books.filter((b) => matchesQuery(b, query)), sort),
+    () => sortBooks(filterBooks(books ?? [], { query }), sort),
     [books, query, sort],
   );
 
   const filtering = query.trim() !== "";
-  const selected = books.find((b) => b.id === selectedId);
-  const countText = filtering
+  // Until the user picks one, the first book of the list is selected.
+  const selected = books?.find((b) => b.id === selectedId) ?? visible[0];
+  const emptyLibrary = books?.length === 0;
+  // Shown instead of the list while there is nothing to list.
+  const status = error
+    ? t("library.error")
+    : !books
+      ? t("library.loading")
+      : emptyLibrary
+        ? t("library.noBooks")
+        : undefined;
+  const countText = !books
+    ? ""
+    : filtering
     ? visible.length === 0
       ? t("results.none")
       : plural(visible.length, { one: "results.one", other: "results.other" })
@@ -122,7 +142,11 @@ export function Library() {
               aria-label={t("library.list")}
               className="rounded-xl bg-background p-4 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:min-h-0 lg:overflow-y-auto"
             >
-              {visible.length === 0 ? (
+              {status ? (
+                <p role={error ? "alert" : undefined} className="py-16 text-center text-lg">
+                  {status}
+                </p>
+              ) : visible.length === 0 ? (
                 <div className="flex flex-col items-center gap-5 py-16 text-center">
                   <p className="text-lg">{t("library.empty")}</p>
                   <Button variant="secondary" onClick={() => setQuery("")}>
@@ -135,7 +159,7 @@ export function Library() {
                     <li key={book.id}>
                       <BookCard
                         book={book}
-                        selected={book.id === selectedId}
+                        selected={book.id === selected?.id}
                         onSelect={() => setSelectedId(book.id)}
                       />
                     </li>
@@ -148,6 +172,8 @@ export function Library() {
           <MetadataPanel book={selected} onUnavailable={unavailable} />
         </div>
       </div>
+
+      {DevTools && <DevTools />}
 
       {notice && (
         <div

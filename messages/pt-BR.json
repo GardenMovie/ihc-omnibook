@@ -8,6 +8,9 @@
   "search.placeholder": "Pesquisar por título, autor, área ou tópico",
   "search.clear": "Limpar busca",
   "add.button": "Adicionar",
+  "library.loading": "Carregando seus livros…",
+  "library.noBooks": "Sua biblioteca está vazia. Use “Adicionar” para incluir um livro.",
+  "library.error": "Não foi possível abrir a biblioteca neste navegador. Verifique se o armazenamento de dados do site está permitido e recarregue a página.",
   "add.book": "Adicionar livro",
   "add.import": "Importar biblioteca (.zip)",
 
