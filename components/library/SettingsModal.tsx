@@ -48,7 +48,7 @@ function differentSettings(saved: unknown, current: Settings): Settings | undefi
   if (!saved) return;
   const found = readSettings(saved);
   const look = (s: Settings) =>
-    JSON.stringify([s.theme, s.fontScale, s.singleKeys, readSettings(s).shortcuts]);
+    JSON.stringify([s.theme, s.fontScale, s.dyslexiaFont, s.singleKeys, readSettings(s).shortcuts]);
   return look(found) === look(current) ? undefined : found;
 }
 
@@ -129,8 +129,8 @@ export function SettingsModal({
 
   /** Only when asked: they replace the ones in use here. */
   function applyBackupSettings(found: Settings) {
-    const { theme, fontScale, shortcuts, singleKeys } = found;
-    onChange({ theme, fontScale, shortcuts, singleKeys });
+    const { theme, fontScale, dyslexiaFont, shortcuts, singleKeys } = found;
+    onChange({ theme, fontScale, dyslexiaFont, shortcuts, singleKeys });
     setImported({ text: t("data.settingsApplied") });
     // The button just used is gone.
     importRef.current?.focus();
@@ -193,12 +193,7 @@ export function SettingsModal({
             </Button>
           </>
         ) : (
-          <>
-            <Button variant="secondary" onClick={onStartTour}>
-              {t("tour.start")}
-            </Button>
-            <Button onClick={() => onOpenChange(false)}>{t("modal.closeButton")}</Button>
-          </>
+          <Button onClick={() => onOpenChange(false)}>{t("modal.closeButton")}</Button>
         )
       }
     >
@@ -254,7 +249,7 @@ export function SettingsModal({
           aria-labelledby="settings-tab-appearance"
           hidden={tab !== "appearance"}
         >
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-6">
             <OptionGroup
               legend={t("settings.fontSize")}
               value={String(settings.fontScale)}
@@ -265,12 +260,24 @@ export function SettingsModal({
               onChange={(v) => onChange({ fontScale: Number(v) })}
             />
             <OptionGroup
+              legend={t("settings.font")}
+              value={settings.dyslexiaFont ? "dyslexic" : "default"}
+              options={[
+                { value: "default", label: t("settings.font.default") },
+                { value: "dyslexic", label: t("settings.font.dyslexic") },
+              ]}
+              onChange={(v) => onChange({ dyslexiaFont: v === "dyslexic" })}
+            />
+            <OptionGroup
               legend={t("settings.theme")}
               value={settings.theme}
               options={THEMES.map((theme) => ({ value: theme, label: themeLabel(theme) }))}
               onChange={(theme) => onChange({ theme })}
               columns={2}
             />
+            <Button variant="secondary" className="self-start" onClick={onStartTour}>
+              {t("tour.start")}
+            </Button>
           </div>
         </div>
 

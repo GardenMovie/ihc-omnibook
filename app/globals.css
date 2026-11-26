@@ -139,6 +139,11 @@ body {
   line-height: 1.5;
 }
 
+/* Chosen in the settings; code and generated covers keep their own fonts. */
+[data-font="dyslexic"] body {
+  font-family: "OpenDyslexic", var(--font-sans);
+}
+
 *:focus-visible {
   outline: 3px solid var(--ring);
   outline-offset: 2px;

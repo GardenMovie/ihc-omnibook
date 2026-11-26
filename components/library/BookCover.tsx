@@ -47,7 +47,9 @@ export function BookCover({
   return (
     <div
       aria-hidden="true"
-      className={`flex flex-col justify-between p-[8%] ${frame}`}
+      // A picture of a book: it keeps its own font, as the wider dyslexia one
+      // would break words. The same text is next to it.
+      className={`flex flex-col justify-between p-[8%] font-sans ${frame}`}
       style={{ background: `linear-gradient(160deg, ${from}, ${to})`, color: text }}
     >
       <span className="line-clamp-1 text-[0.7em] font-semibold uppercase tracking-[0.18em] opacity-90">

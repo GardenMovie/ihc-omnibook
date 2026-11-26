@@ -13,6 +13,8 @@ export type Settings = {
   theme: Theme;
   /** 0.85 to 2.0, default 1 (SPEC section 7) */
   fontScale: number;
+  /** Shows the text in OpenDyslexic. */
+  dyslexiaFont: boolean;
   shortcuts: Shortcuts;
   /** False turns off the shortcuts that are a single character. */
   singleKeys: boolean;
@@ -27,6 +29,7 @@ export const SETTINGS_KEY = "omnibook-settings";
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   fontScale: 1,
+  dyslexiaFont: false,
   shortcuts: {},
   singleKeys: true,
   tourSeen: false,
@@ -69,6 +72,7 @@ export function readSettings(saved: unknown): Settings {
       typeof parsed.fontScale === "number"
         ? snapFontScale(parsed.fontScale)
         : DEFAULT_SETTINGS.fontScale,
+    dyslexiaFont: parsed.dyslexiaFont === true,
     shortcuts: readShortcuts(parsed.shortcuts),
     singleKeys: parsed.singleKeys !== false,
     tourSeen: parsed.tourSeen === true,
@@ -103,10 +107,11 @@ export function applySettings(settings: Settings): void {
       : settings.theme;
   root.dataset.theme = resolved;
   root.style.setProperty("--font-scale", String(settings.fontScale));
+  root.dataset.font = settings.dyslexiaFont ? "dyslexic" : "default";
 }
 
 /**
- * Inline script run before first paint so the saved theme and text size are
- * applied without a flash. Keep in sync with applySettings above.
+ * Inline script run before first paint so the saved theme, text size and font
+ * are applied without a flash. Keep in sync with applySettings above.
  */
-export const BOOT_SCRIPT = `(function(){try{var s=JSON.parse(localStorage.getItem("${SETTINGS_KEY}")||"{}");var t=s.theme||"system";if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}var r=document.documentElement;r.dataset.theme=t;var f=Number(s.fontScale);if(f>=1&&f<=2){r.style.setProperty("--font-scale",String(f<1.25?1:f<1.75?1.5:2))}}catch(e){}})();`;
+export const BOOT_SCRIPT = `(function(){try{var s=JSON.parse(localStorage.getItem("${SETTINGS_KEY}")||"{}");var t=s.theme||"system";if(t==="system"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}var r=document.documentElement;r.dataset.theme=t;if(s.dyslexiaFont===true){r.dataset.font="dyslexic"}var f=Number(s.fontScale);if(f>=1&&f<=2){r.style.setProperty("--font-scale",String(f<1.25?1:f<1.75?1.5:2))}}catch(e){}})();`;
