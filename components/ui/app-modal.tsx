@@ -57,19 +57,25 @@ export function AppModal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-[var(--overlay)]" />
+        {/* Same layer as the content, so a modal opened over another covers it. */}
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-[var(--overlay)]" />
         <Dialog.Content
           // No description: say so explicitly so Radix does not warn.
           {...(description ? {} : { "aria-describedby": undefined })}
           style={fullScreen ? undefined : { maxWidth, height }}
           // Give focus back to whatever opened the modal (STYLE 4).
           onCloseAutoFocus={(event) => {
+            const other = document.querySelector("[role=dialog]");
+            const opener = returnFocusRef?.current;
             // Another modal took this one's place: the focus is already there.
-            if (document.querySelector("[role=dialog]")) {
+            if (document.activeElement?.closest("[role=dialog]")) {
               event.preventDefault();
-            } else if (returnFocusRef?.current?.isConnected) {
+            } else if (opener?.isConnected && (!other || opener.closest("[role=dialog]"))) {
+              // Also back into a modal that stayed open underneath.
               event.preventDefault();
-              returnFocusRef.current.focus();
+              opener.focus();
+            } else if (other) {
+              event.preventDefault();
             }
           }}
           onInteractOutside={(event) => {

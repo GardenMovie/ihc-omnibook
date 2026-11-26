@@ -2,7 +2,7 @@
 
 /** React access to the database: results update when the data changes. */
 import { liveQuery } from "dexie";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { listBooks, listCollections, listDrafts } from "@/lib/db/books";
 import { fileStore } from "@/lib/files/store";
 
@@ -22,6 +22,23 @@ function useLive<T>(query: () => Promise<T>): LiveResult<T> {
     return () => subscription.unsubscribe();
   }, [query]);
   return result;
+}
+
+/** False while prerendering. */
+export function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 }
 
 /** `data` is undefined while loading. */

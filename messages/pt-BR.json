@@ -110,6 +110,9 @@
   "settings.description": "As mudanças valem na hora e ficam salvas só neste navegador.",
   "settings.fontSize": "Tamanho do texto",
   "settings.theme": "Tema e contraste",
+  "settings.font": "Fonte",
+  "settings.font.default": "Padrão",
+  "settings.font.dyslexic": "Para dislexia",
   "settings.tab.appearance": "Aparência",
   "settings.tab.data": "Seus dados",
   "settings.tab.shortcuts": "Atalhos",
@@ -189,6 +192,9 @@
   "sort.year": "Ano",
   "sort.added": "Data de adição",
 
+  "vlibras.name": "VLibras",
+  "vlibras.notBuilt": "A tradução para Libras com o VLibras ainda não foi implementada.",
+
   "panel.label": "Detalhes do livro",
   "panel.empty": "Selecione um livro para ver os detalhes.",
   "panel.edit": "Editar metadados",
@@ -225,7 +231,6 @@
   "accessibility.badge.unknown": "Não verificado",
 
   "book.select": "Selecionar {title}",
-  "book.by": "de {author}",
 
   "tour.offerTitle": "Primeira vez aqui?",
   "tour.offer": "Veja um passo a passo curto. Você também pode abrir depois em Configurações.",

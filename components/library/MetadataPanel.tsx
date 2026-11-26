@@ -45,7 +45,10 @@ export function MetadataPanel({
   onDownload,
   onOpen,
   shortcuts,
+  inModal = false,
 }: {
+  /** Inside a modal (narrow screens), which provides the frame and the label. */
+  inModal?: boolean;
   shortcuts: Shortcuts;
   book: Book | undefined;
   /** `opener` gets the focus back when the modal closes. */
@@ -54,10 +57,15 @@ export function MetadataPanel({
   onDownload: (book: Book) => void;
   onOpen: (book: Book, opener: HTMLElement) => void;
 }) {
+  const Frame = inModal ? "div" : "aside";
   return (
-    <aside
-      aria-label={t("panel.label")}
-      className="flex flex-col gap-6 rounded-xl bg-background p-6 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto"
+    <Frame
+      aria-label={inModal ? undefined : t("panel.label")}
+      className={`flex flex-col gap-6 ${
+        inModal
+          ? "mx-auto w-full max-w-xl"
+          : "rounded-xl bg-background p-6 shadow-[0_1px_4px_rgb(0_0_0/0.12)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-y-auto"
+      }`}
     >
       {!book ? (
         <p className="py-10 text-center text-lg text-muted-foreground">{t("panel.empty")}</p>
@@ -111,7 +119,11 @@ export function MetadataPanel({
           </dl>
 
           {/* Stays visible when the details scroll (long notes, large text) */}
-          <div className="sticky bottom-0 -mb-6 flex flex-wrap gap-4 bg-background pt-2 pb-6">
+          <div
+            className={`sticky flex flex-wrap gap-4 bg-background pt-2 ${
+              inModal ? "-bottom-1 pb-1" : "bottom-0 -mb-6 pb-6"
+            }`}
+          >
             <ShortcutTooltip shortcut={shortcuts.open}>
               <Button
                 className="flex-1"
@@ -154,6 +166,6 @@ export function MetadataPanel({
           </div>
         </>
       )}
-    </aside>
+    </Frame>
   );
 }

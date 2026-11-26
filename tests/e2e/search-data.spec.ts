@@ -8,8 +8,11 @@ const button = (page: Page, name: string) => page.getByRole("button", { name, ex
 async function expectAccessible(page: Page) {
   // Chromium only: see library.spec.ts.
   if (page.context().browser()?.browserType().name() !== "chromium") return;
-  // The book cards have a known "label in name" finding, outside this test.
-  const { violations } = await new AxeBuilder({ page }).exclude("button[aria-pressed]").analyze();
+  // axe counts the text drawn on generated book covers as part of each card's
+  // label, which the card's name does not repeat.
+  const { violations } = await new AxeBuilder({ page })
+    .disableRules(["label-content-name-mismatch"])
+    .analyze();
   expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(" ")}`)).toEqual([]);
 }
 

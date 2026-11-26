@@ -152,6 +152,8 @@ BibTeX braces are added only around words with a capital after the first letter 
 
 No modal is designed for these yet.
 
+**Book details on narrow screens (built):** below 64rem the details panel is not shown under the list. Choosing a book opens it as a full-window `AppModal` (`fullScreen`, no footer), closed with the X or Esc. Edit, export and the reader open on top of it and return to it; deleting the book closes it. The browser's Back button does not close it.
+
 **Download a book (built):** "Baixar arquivo" in the details panel. `getBookFile(id)` returns a `File` already named `Autor - Título (Ano).ext`; `saveFile` (`lib/download.ts`) hands it to the browser.
 
 **Open a book (built for TXT and MD):** "Abrir" shows `components/reader/ReaderModal.tsx`, a full-window `AppModal` (`fullScreen`). Opening calls `markOpened(id)` so "Acesso recente" works. The place reached is kept in `book.readPosition` (0 to 1) with `saveReadPosition`, and goes into backups. The browser's Back button closes the reader. Markdown never runs HTML or loads images. PDF opens in a new tab with the browser's own viewer, from a `blob:` address (no reading position is kept). EPUB still shows the "em breve" notice, since browsers cannot display it; read `personalDocs/EPUB-SECURITY.md` first.
@@ -185,7 +187,7 @@ const result = await importLibrary(zipFile); // throws if it is not readable
 
 ### Keyboard shortcuts
 
-Defined in `lib/shortcuts.ts`, handled in `Library`, listed and changed in Configurações, tab "Atalhos" (`?` opens it). They do nothing while the user types or a modal is open. Single-character ones can be remapped or turned off (WCAG 2.1.4).
+Defined in `lib/shortcuts.ts`, handled in `Library`, listed and changed in Configurações, tab "Atalhos" (`?` opens it). They do nothing while the user types or a modal is open (except the book's own, over its full-screen details). Single-character ones can be remapped or turned off (WCAG 2.1.4).
 ## 7. Checklist for each modal
 
 SPEC section 11: keyboard only, focus trapped and restored, labeled for screen readers, changes announced, works at 200% zoom, no information by color alone, plain pt-BR.

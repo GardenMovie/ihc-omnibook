@@ -8,7 +8,7 @@ import { filterBooks, sortBooks, type SortKey } from "@/lib/books";
 import { deleteBook, markOpened, purgeDeleted, restoreBook } from "@/lib/db/books";
 import type { Book } from "@/lib/db/types";
 import { saveFile } from "@/lib/download";
-import { useBooks, useDrafts } from "@/lib/hooks";
+import { useBooks, useDrafts, useMediaQuery } from "@/lib/hooks";
 import { plural, t } from "@/lib/i18n";
 import { getBookFile } from "@/lib/library";
 import { FILE_TYPES, uniqueTerms } from "@/lib/search";
@@ -29,6 +29,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { BookCard } from "./BookCard";
 import { MetadataPanel } from "./MetadataPanel";
+import { VLibrasBadge } from "./VLibrasBadge";
 import { Navbar } from "./Navbar";
 import { SettingsModal, type SettingsTab } from "./SettingsModal";
 import { SortMenu } from "./SortMenu";
@@ -60,6 +61,11 @@ export function Library() {
   // The book being read.
   const [readingId, setReadingId] = useState<string>();
   const readerOpenerRef = useRef<HTMLElement | null>(null);
+  // Below Tailwind's "lg" the details cover the screen instead of sitting
+  // under the list.
+  const narrow = !useMediaQuery("(min-width: 64rem)");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const cardRef = useRef<HTMLElement | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("appearance");
   const settingsButtonRef = useRef<HTMLButtonElement>(null);
@@ -259,6 +265,7 @@ export function Library() {
       throw cause;
     }
     setBookModal(undefined);
+    setDetailsOpen(false);
     setNotice({ text: t("edit.deleted", { title: book.title }), undo: () => undoDelete(book) });
   }
 
@@ -276,6 +283,18 @@ export function Library() {
   }
 
   const shortcuts = activeShortcuts(settings.shortcuts, settings.singleKeys);
+
+  const details = (inModal: boolean) => (
+    <MetadataPanel
+      inModal={inModal}
+      book={selected}
+      shortcuts={shortcuts}
+      onEdit={(book, opener) => openBookModal("edit", book, opener)}
+      onExport={(book, opener) => openBookModal("export", book, opener)}
+      onDownload={download}
+      onOpen={openBook}
+    />
+  );
 
   /** False when there is nothing to act on. */
   function runShortcut(action: Action): boolean {
@@ -296,9 +315,13 @@ export function Library() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.defaultPrevented || event.repeat || event.isComposing) return;
-      if (isTyping(event.target) || document.querySelector("[role=dialog]")) return;
+      if (isTyping(event.target)) return;
       const key = keyFromEvent(event);
       const action = key && ACTIONS.find((a) => shortcuts[a] === key);
+      // No shortcuts over a modal, except the book's own over its details.
+      const dialogs = [...document.querySelectorAll("[role=dialog]")];
+      const bookAction = ["open", "edit", "export", "download"].includes(action ?? "");
+      if (dialogs.some((d) => !bookAction || !d.querySelector("[data-book-details]"))) return;
       // Otherwise the key would also be typed into the field that gets focus.
       if (action && runShortcut(action)) event.preventDefault();
     }
@@ -360,6 +383,23 @@ export function Library() {
           onChange={updateSettings}
           returnFocusRef={tourOpenerRef}
         />
+        {/* Before the modals it opens, which then appear on top of it. */}
+        <AppModal
+          open={narrow && detailsOpen && !!selected}
+          onOpenChange={setDetailsOpen}
+          title={t("panel.label")}
+          fullScreen
+          // A tap on a notice must not close it.
+          dismissOnOutside={false}
+          returnFocusRef={cardRef}
+          // Only the X closes it: nothing here to confirm or cancel.
+          footer={false}
+        >
+          {/* Focus starts on the content, not on the X and its tooltip. */}
+          <div tabIndex={-1} data-autofocus data-book-details className="outline-none">
+            {details(true)}
+          </div>
+        </AppModal>
         <AddBookModal
           mode={addMode}
           drafts={drafts}
@@ -471,7 +511,11 @@ export function Library() {
                       <BookCard
                         book={book}
                         selected={book.id === selected?.id}
-                        onSelect={() => setSelectedId(book.id)}
+                        onSelect={(card) => {
+                          setSelectedId(book.id);
+                          cardRef.current = card;
+                          if (narrow) setDetailsOpen(true);
+                        }}
                       />
                     </li>
                   ))}
@@ -480,21 +524,21 @@ export function Library() {
             </section>
           </main>
 
-          <MetadataPanel
-            book={selected}
-            shortcuts={shortcuts}
-            onEdit={(book, opener) => openBookModal("edit", book, opener)}
-            onExport={(book, opener) => openBookModal("export", book, opener)}
-            onDownload={download}
-            onOpen={openBook}
-          />
+          {!narrow && details(false)}
         </div>
       </div>
 
       {DevTools && <DevTools />}
 
+      <VLibrasBadge />
+
       {/* The live region stays mounted, or screen readers may miss the text. */}
-      <div role="status" className="fixed right-4 bottom-4 left-4 z-50 mx-auto max-w-xl">
+      {/* aria-live keeps it announced while a modal hides the rest of the page. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed right-4 bottom-4 left-4 z-[60] mx-auto max-w-xl"
+      >
         {notice && (
           <div className="flex items-center gap-4 rounded-lg bg-foreground py-3 pr-2 pl-5 text-lg text-background shadow-[0_12px_40px_rgb(0_0_0/0.25)]">
             <span className="min-w-0 flex-1 break-words">{notice.text}</span>
