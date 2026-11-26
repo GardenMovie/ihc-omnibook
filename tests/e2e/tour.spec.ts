@@ -49,6 +49,8 @@ test("offers the walkthrough once and reopens it from the settings", async ({ pa
   await expect(dialog).toHaveCount(0);
 
   await button("Configurações").click();
+  await page.getByRole("tab", { name: "Ajuda" }).click();
+  await expectAccessible(page);
   await button("Ver o passo a passo").click();
   await expect(dialog).toHaveCount(1);
   await expect(dialog.getByText("Passo 1 de 7")).toBeVisible();

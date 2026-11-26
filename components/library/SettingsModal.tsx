@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type RefObject } from "react";
-import { Download, Trash2, Upload } from "lucide-react";
+import { CircleHelp, Download, Trash2, Upload } from "lucide-react";
 import { saveFile } from "@/lib/download";
 import { exportLibrary, importLibrary, type ImportResult } from "@/lib/files/backup";
 import { plural, t, type MessageKey } from "@/lib/i18n";
@@ -17,7 +17,7 @@ import { ShortcutSettings } from "./ShortcutSettings";
 const themeLabel = (theme: Theme) =>
   t((theme === "dark" ? "theme.dark.name" : `theme.${theme}`) as MessageKey);
 
-const TABS = ["appearance", "shortcuts", "data"] as const;
+const TABS = ["appearance", "shortcuts", "data", "help"] as const;
 export type SettingsTab = (typeof TABS)[number];
 
 const danger = "border-destructive! text-destructive!";
@@ -275,9 +275,6 @@ export function SettingsModal({
               onChange={(theme) => onChange({ theme })}
               columns={2}
             />
-            <Button variant="secondary" className="self-start" onClick={onStartTour}>
-              {t("tour.start")}
-            </Button>
           </div>
         </div>
 
@@ -289,6 +286,24 @@ export function SettingsModal({
         >
           {/* Mounted only while shown, so old messages do not linger. */}
           {tab === "shortcuts" && <ShortcutSettings settings={settings} onChange={onChange} />}
+        </div>
+
+        <div
+          role="tabpanel"
+          id="settings-panel-help"
+          aria-labelledby="settings-tab-help"
+          hidden={tab !== "help"}
+        >
+          <section aria-labelledby="help-tour" className="flex flex-col items-start">
+            <h3 id="help-tour" className={heading}>
+              {t("help.tour")}
+            </h3>
+            <p className={hint}>{t("help.tourHint")}</p>
+            <Button onClick={onStartTour}>
+              <CircleHelp aria-hidden className="size-5" />
+              {t("tour.start")}
+            </Button>
+          </section>
         </div>
 
         <div
